@@ -1,0 +1,7 @@
+project_root_markers = []
+
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[shell_environment]
+PATH="C:\\Users\\JuiceUP\\AppData\\Local\\Programs\\R\\R-4.5.1\\bin\\x64"

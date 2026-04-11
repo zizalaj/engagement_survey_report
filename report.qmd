@@ -1,0 +1,1463 @@
+---
+format:
+  html:
+    pagedjs: true
+    self-contained: true
+    css:
+      - styles-base.css
+      - styles-ai.css
+      - codex/style-editor-prototype/generated/style-overrides.css
+    toc: false
+    number-sections: false
+    page-layout: full
+    embed-resources: true
+    margin: 0
+    pagedjs-config:
+      bleed: 0
+      marks: none
+output-file: report_test.html
+---
+
+<!---------- Úvodní slide ---------->
+
+<div class="slide intro-slide">
+<div class="top-badge"> <span class="pill">Quick Scan</span></div>
+
+<div class="main accent">Engagement průzkum</div>
+
+<div class="subtitle-wrap">
+<div class="subtitle">Manažerský výstup</div>
+<!-- Reserved empty space for later blurred logo insert -->
+<div class="reserved-logo-space" aria-hidden="true"></div>
+</div>
+
+<!-- Bottom-left SVG logo (update filename as needed) -->
+
+<img src="ju_logo.svg" alt="juiceUP logo" class="brand-logo">
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+instal_funkce <- function(balicek){
+  if (!requireNamespace(balicek, quietly = T)){
+    install.packages(balicek)
+    library(balicek)
+  }
+  else{
+    library(balicek, character.only = T)
+  }
+}
+
+instal_funkce("here")
+instal_funkce("dplyr")
+instal_funkce("tidyr")
+instal_funkce("readxl")
+instal_funkce("extrafont")
+instal_funkce("showtext")
+instal_funkce("stringr")
+instal_funkce("openxlsx")
+instal_funkce("ggplot2")
+
+font_add("Europa", regular = here("fonts", "EuropaGroNr2JU Regular.otf"),
+         bold = here("fonts", "EuropaGroNr2JU Bold.ttf"))
+showtext_auto()
+
+aktualni_pruzkum <- read_excel(here("data","aktualni_pruzkum.xlsx"))
+#rok2 <- read_excel("Rok2.xlsx")
+
+
+otazky_aktualni <- names(aktualni_pruzkum)
+#otazky_minule <- names(rok1)
+
+```
+
+</div>
+
+
+<!----- Co nás dnes čeká ---------->
+
+<div class="slide agenda-slide">
+<div class="agenda-content">
+<div class="agenda-title">Co nás dnes čeká</div>
+
+<ul class="agenda-list">
+
+<li class="agenda-item">
+<span class="agenda-num">01</span>
+<span class="agenda-text">Průzkum v číslech</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">02</span>
+<span class="agenda-text">Výsledky engagementu</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">03</span>
+<span class="agenda-text">Výsledky jednotlivých driverů</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">04</span>
+<span class="agenda-text">Otázky, které dopadly hůře</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">05</span>
+<span class="agenda-text">Multiple choice otázky</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">06</span>
+<span class="agenda-text">Otevřené otázky</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">07</span>
+<span class="agenda-text">Závěrečná shrnutí a doporučení</span>
+</li>
+
+</ul>
+
+</div>
+
+<div class="progress-bar"></div>
+
+
+</div>
+
+
+
+
+<!---- Průzkum v číslech sekce ----->
+
+<div class="slide section-slide">
+
+<div class="section-number">01</div>
+
+<div class="section-title">Průzkum v číslech</div>
+
+<div class="section-description">
+Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě.
+Ukážeme Vám např. kolik zaměstnanců se průzkumu zúčastnilo celkově,
+za jednotlivé organizační jednotky nebo podle demografických údajů.
+</div>
+
+  <!-- Progress bar -->
+<div class="progress-bar" style="--progress: 14.825%">
+<div class="progress-bar-fill"></div>
+</div>
+
+</div>
+
+
+
+<!-------- Průzkum v číslech výsledky --------------->
+
+<div class="slide survey-numbers-slide">
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+################### základní informace
+
+
+### průměrná délka vyplnění
+
+cas_znacky <- c("Start Date (UTC)", "Submit Date (UTC)")
+
+cas_sloupce <- cas_znacky[cas_znacky %in% otazky_aktualni]
+
+casy <- aktualni_pruzkum[,cas_sloupce]
+
+casy <- casy %>%
+  mutate(
+    `Start Date (UTC)` = as.POSIXlt(`Start Date (UTC)`),
+    `Submit Date (UTC)` = as.POSIXlt(`Submit Date (UTC)`)
+  )
+
+casy$diff <- as.numeric(difftime(casy$`Submit Date (UTC)`,casy$`Start Date (UTC)`))
+
+prum_cas_vyplneni_sec <- mean(casy$diff)
+
+prum_cas_vyplneni_min <- round(prum_cas_vyplneni_sec/60,0)
+
+
+
+
+### pocet respondentu
+
+pocet_resp <- nrow(aktualni_pruzkum)
+
+
+################### návratnost
+
+odd_souhrn_vyplnene <- read_excel(
+  here("data", "navratnost_pruzkumu.xlsx"),
+  sheet = "Návratnost průzkumu"
+)
+
+odd_souhrn_long <- odd_souhrn_vyplnene %>%
+  pivot_longer(cols= 2:3, names_to = "Kategorie", values_to = "Pocet")
+
+
+odd_souhrn_long$oddeleni_trunc <- str_trunc(odd_souhrn_long$oddeleni, width = 25, ellipsis = "...")
+
+
+
+### celková návratnost
+resp_celkem <- sum(odd_souhrn_vyplnene[,2])
+zam_celkem <- sum(odd_souhrn_vyplnene[,3])
+
+navratnost <- round(resp_celkem/zam_celkem*100,0)
+
+
+
+
+```
+
+<div class="survey-title">Průzkum v číslech</div>
+
+<!-- Základní info -->
+<div class="survey-kpis">
+
+<div class="survey-kpi-block">
+
+<div>
+<span class="survey-kpi-number">`r navratnost`</span>
+<span class="survey-kpi-unit">%</span>
+</div>
+<div class="survey-kpi-text">
+je číslo, které odpovídá celkové návratnosti odpovědí od vašich zaměstnanců.
+</div>
+</div>
+
+
+
+<div class="survey-kpi-block">
+<div>
+<span class="survey-kpi-number">`r prum_cas_vyplneni_min`</span>
+<span class="survey-kpi-unit">minut</span>
+</div>
+<div class="survey-kpi-text">
+trvalo průměrně vyplnění dotazníku.
+</div>
+</div>
+
+
+<div class="survey-kpi-block">
+<div>
+<span class="survey-kpi-number">`r pocet_resp`</span>
+<span class="survey-kpi-unit">lidí</span>
+</div>
+<div class="survey-kpi-text">
+ve vaší firmě odpovědělo na průzkum.
+</div>
+</div>
+
+</div>
+
+<!-- Prostřední grafy -->
+
+<div class="survey-main">
+<div>
+<div class="survey-box">
+<div class="survey-box-title">Respondenti podle oddělení</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 4
+#| fig-align: center
+
+ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
+  geom_col(width = .8, position = "dodge")+
+  geom_text(aes(label = Pocet), 
+            position = position_dodge(width = .8),
+            family = "Europa",
+            fontface = "bold", size = 6,
+            vjust = -.3)+
+  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      family = "Europa", face = "plain", size = 20, angle = 30, 
+      vjust = .5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    panel.background = element_blank(),
+    legend.text = element_text(
+      family = "Europa", face = "plain", size = 20
+    )
+  )+
+  scale_fill_manual(values = c("pocet_respondentu" = "#63E8C6","pocet_zamestnancu" = "#D1D1D1"),
+                    labels = c("Počet respondentů", "Počet zaměstnanců"))
+```
+</div>
+</div>
+
+<div>
+<div class="survey-box">
+<div class="survey-box-title">Respondenti podle věku</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 2
+#| fig-align: center
+
+vek_expr <- "let\\?"
+
+vek_index <- str_detect(otazky_aktualni, vek_expr)
+
+vek_ot <- otazky_aktualni[vek_index]
+
+vek <- aktualni_pruzkum[,vek_ot]
+
+names(vek) <- "vek"
+
+vek_souhrn <- vek %>%
+  count(vek) %>%
+  rename(pocet = "n")
+
+ggplot(vek_souhrn, aes(x = vek, y = pocet))+
+  geom_col(fill = "#63E8C6", width = .9, position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface = "bold", 
+            size = 6, vjust = -.3)+
+  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      Family = "Europa", size = 20
+    )
+  )
+
+
+```
+</div>
+</div>
+</div>
+
+  <!-- Grafy pozice a seniorita -->
+<div class="survey-right">
+
+<div class="survey-right-box">
+<div class="survey-box-title">Pracovní pozice</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 4
+
+### pozice
+
+pozice_expr <- "jaké\\s"
+
+pozice_index <- str_detect(otazky_aktualni, pozice_expr)
+
+pozice_ot <- otazky_aktualni[pozice_index]
+
+pozice <- aktualni_pruzkum[,pozice_ot]
+
+names(pozice) <- "pozice"
+
+pozice_souhrn <- pozice %>%
+  group_by(pozice) %>%
+  summarise(pocet = n())
+
+
+ggplot(pozice_souhrn, aes(pozice, pocet))+
+  geom_col(width = .5, fill = "#63E8C6", position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface= "bold", size = 10, hjust = -.3)+
+  coord_flip()+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      family = "Europa", size = 25
+    )
+    
+  )
+
+
+```
+</div>
+
+<div class="survey-right-box">
+<div class="survey-box-title">Délka působení ve firmě</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 5
+
+### doba ve firmě
+
+doba_expr <- "dlouho"
+
+doba_index <- str_detect(otazky_aktualni, doba_expr)
+
+doba_ot <- otazky_aktualni[doba_index]
+
+doba <- aktualni_pruzkum[,doba_ot]
+
+names(doba) <- "doba"
+
+az_expr <- "\\d+(?= až{1})"
+
+do_expr <- "do\\s\\d{1}"
+
+vice_expr <- "více"
+
+doba_souhrn <- doba %>%
+  group_by(doba) %>%
+  summarise(pocet = n()) %>%
+  mutate(az = case_when(
+    str_detect(doba,do_expr) == T ~ 0,
+    str_detect(doba,vice_expr) == T ~ 100,
+    .default = as.integer(str_extract(doba,az_expr))
+  )) %>%
+  arrange(az) %>%
+  mutate(doba = factor(doba, levels = doba))
+
+
+#musí se vymyslet, jak ty odpovědi řadit!!
+# udělat si variables jako do xx, xx a více a leading digit.
+# na základě toho udělat ranking
+
+ggplot(doba_souhrn, aes(doba, pocet))+
+  geom_col(width = .5, fill = "#FFD06B", position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface = "bold", size = 10, hjust = -.3)+
+  coord_flip()+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      family = "Europa", size = 25
+    )
+    
+  )
+
+
+```
+</div>
+
+</div>
+
+
+</div>
+
+
+
+<!-------- Výsledky engagementu oddělovač sekce ------------->
+
+
+<div class="slide section-slide">
+
+<div class="section-number">02</div>
+
+<div class="section-title">Výsledky engagementu</div>
+
+<div class="section-description">
+<p>
+Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk dokáže do své práce ponořit, jak pro svou práci/ firmu/kolegy udělá o krok navíc či jednoduše, jak moc jej práce baví a těší.
+</p>
+
+<p>
+Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdílných metrik – Engagement indexu a Individuální míry engagementu. Výpočet obou metrik Vám dále vysvětlíme a odprezentujeme.
+</p>
+
+</div>
+
+  <!-- Progress bar -->
+<div class="progress-bar" style="--progress: 29%">
+<div class="progress-bar-fill"></div>
+</div>
+
+</div>
+
+
+<!-- Metriky engagementu ---->
+<div class="slide metrics-slide">
+<div class="content-wrapper">
+<div class="header-block">
+<div class="section-title">Metriky engagementu</div>
+<div class="section-description">
+Každá z engagementových metrik má svůj unikátní záměr, a vyžaduje tak vlastní výpočet i interpetaci. Sledováním Engagement indexu i Individuální míry engagementu získáte komplexnější vhled do celé problematiky a možnost odhalit potenciální problémy, které jeden samostatný ukazatel nedokáže odkrýt.​
+</div>
+</div>
+<div class="metrics-grid">
+<div class="metric-column">
+<span class="metric-number">01</span>
+<div class="metric-title">Engagement index</div>
+<div class="metric-description">
+Engagement index je výchozí metrika engagementu v našich výstupech, a má za cíl zmapovat pocity zaměstnanců ohledně jednotlivých aspektů engagementu. Představuje výkon firmy napříč otázkami. Každá odpověď na dílčí otázku může ovlivnit celkovou úroveň engagementu, a proto se také za úplný engagement považuje pouze odpověď Určitě ano. Tato metrika je dále zkoumána napříč odděleními a senioritou zaměstnanců.​
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">02</span>
+<div class="metric-title">Individuální míra engagementu</div>
+<div class="metric-description">
+<p>Individuální míra engagementu se zaměřuje na každého zaměstnance zvlášť. Konkrétně na to, jak si vede napříč všemi aspekty engagementu. U každého respondenta se zprůměrují odpovědi na engagementové otázky, a podle toho se zařadí do jedné ze tří skupin – fully engaged, partially engaged nebo disengaged. Na úrovni firmy je důležité sledovat, jaké jsou proporce jednotlivých skupin zaměstnanců a zda se mění v čase.​</p>
+<p>Aby byla zohledněná individuální variabilita jednotlivých respondentů, za fully engaged považujeme všechny s průměrem 1,2 a méně, za partially engaged všechny s průměrem mezi 1,2 a 2,5 a za disengaged všechny s průměrem ​
+2,5 a méně.​</p>
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">03</span>
+<div class="metric-title">Net promoter score (NPS)</div>
+<div class="metric-description">
+Net promoter score sleduje jednu věc – nakolik je daný zaměstnanec dobrým ambasadorem firmy. Ochota aktivně propagovat svou firmu jako dobré místo pro práci je silně asociovaná i s ostatními aspekty engagementu, a tak skvěle doplňuje obrázek o stavu engagementu ve firmě. Net promoter score dle odpovědi na otázku Doporučil(a) bych tuto firmu jako zaměstnavatele dělí zaměstnance na tři typy – active promoters, neutrals a active detractors.
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+
+<!-- Jak číst? — Engagement index -->
+<div class="slide jakcist-slide jakcist--engindex">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<span class="jakcist-header-main">Jak číst?</span><span class="jakcist-header-sub">Engagement index</span>
+</div>
+<span class="jakcist-q q1">?</span><span class="jakcist-q q2">?</span><span class="jakcist-q q3">?</span>
+</div>
+<div class="jakcist-content">
+<p class="jakcist-lead">Tento index ukazuje, jak respondenti reagují na otázku, rozdělený do tří segmentů podle úrovně engagementu.</p>
+<div class="jakcist-main">
+<div class="jakcist-card">
+<div class="jakcist-card-title">Engagement index za firmu</div>
+<div class="jakcist-kpis">
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Úplný engagement</div>
+<div class="jakcist-kpi-value accent-teal">42&nbsp;%</div>
+<p class="jakcist-kpi-desc">Úplný engagement za firmu = 42 %. Toto číslo vyznačuje, kolik % odpovědí na všechny engagementové otázky bylo určitě ano.</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Částečný engagement</div>
+<div class="jakcist-kpi-value accent-grey">33&nbsp;%</div>
+<p class="jakcist-kpi-desc">Částečný engagement představuje odpovědi, které nejsou zcela jednoznačně pozitivní.</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Slabý engagement</div>
+<div class="jakcist-kpi-value accent-pink">25&nbsp;%</div>
+<p class="jakcist-kpi-desc">Slabý engagement označuje podíl odpovědí s nízkou mírou zapojení.</p>
+</div>
+</div>
+</div>
+<div class="jakcist-right">
+<div class="jakcist-right-title">Engagement index pro otázku</div>
+<div class="jakcist-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-align: "center"
+# TODO: zde vytvoř plot (stacked/segmented bar) pro pravý blok
+```
+</div> 
+</div> 
+</div> 
+</div> 
+<div class="jakcist-legend">
+<span class="jakcist-legend-label">Škála odpovědí</span> 
+<div class="jakcist-legend-items"> 
+<div class="jakcist-legend-item">
+<span class="jakcist-swatch teal"></span>
+<strong>Určitě ano</strong> = skóre 1</div>
+
+<div class="jakcist-legend-item">
+<span class="jakcist-swatch tealLight"></span><strong>Spíše ano</strong> = skóre 2</div>
+<div class="jakcist-legend-item">
+<span class="jakcist-swatch grey"></span>
+<strong>Nemohu se rozhodnout</strong> = skóre 3</div>
+
+<div class="jakcist-legend-item">
+<span class="jakcist-swatch pink"></span><strong>Spíše ne</strong> = skóre 4</div>
+<div class="jakcist-legend-item">¨
+<span class="jakcist-swatch pinkStrong"></span><strong>Určitě ne</strong> = skóre 5</div> </div>
+</div>
+</div> 
+
+
+
+
+
+<!---- Jak číst - individuální míra engagementu --->
+
+<div class="slide jakcist-slide jakcist--individual">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<span class="jakcist-header-main">Jak číst?</span>
+<span class="jakcist-header-sub">Individuální míra engagementu</span>
+</div>
+<span class="jakcist-q q1">?</span><span class="jakcist-q q2">?</span><span class="jakcist-q q3">?</span>
+</div>
+<div class="jakcist-content">
+<p class="jakcist-lead">Individuální míra engagementu ukazuje, jak si každý zaměstnanec vede napříč engagementovými otázkami.</p>
+<div class="jakcist-main">
+<div class="jakcist-card">
+<div class="jakcist-card-title">Individuální míra engagementu</div>
+<div class="jakcist-kpis">
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Úplný engagement</div>
+<div class="jakcist-kpi-value accent-teal">42&nbsp;%</div>
+<p class="jakcist-kpi-desc">Engaged zaměstnanec je každý, kdo má průměrné skóre engagementových otázek 1,5 a méně.</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Částečný engagement</div>
+<div class="jakcist-kpi-value accent-grey">33&nbsp;%</div>
+<p class="jakcist-kpi-desc">Částečně engaged zaměstnanci mají průměr mezi 1,5 a 2,5.</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Slabý engagement</div>
+<div class="jakcist-kpi-value accent-pink">25&nbsp;%</div>
+<p class="jakcist-kpi-desc">Disengaged zaměstnanci mají průměr vyšší než 2,5.</p>
+</div>
+</div>
+</div>
+<div class="jakcist-right">
+<div class="jakcist-right-title">Příklad:</div>
+<p class="jakcist-example">Respondent odpověděl na engagementové otázky: <em>Určitě ano, Určitě ano, Spíše ano, Spíše ano</em>.</p>
+<p class="jakcist-example">Jeho/její průměr = (1+1+2+2)/4 = 1,5.</p>
+<p class="jakcist-example">Respondent patří mezi <strong>engaged</strong> zaměstnance.</p>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<span class="jakcist-legend-label">Škála odpovědí</span>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item"><span class="jakcist-swatch teal"></span><strong>Určitě ano</strong> = skóre 1</div>
+<div class="jakcist-legend-item"><span class="jakcist-swatch tealLight"></span><strong>Spíše ano</strong> = skóre 2</div>
+<div class="jakcist-legend-item"><span class="jakcist-swatch grey"></span><strong>Nemohu se rozhodnout</strong> = skóre 3</div>
+<div class="jakcist-legend-item"><span class="jakcist-swatch pink"></span><strong>Spíše ne</strong> = skóre 4</div>
+<div class="jakcist-legend-item"><span class="jakcist-swatch pinkStrong"></span><strong>Určitě ne</strong> = skóre 5</div>
+</div>
+</div>
+</div>
+
+
+
+
+<!--------- Engagement index výsledky ----------------------------->
+
+<div class="slide engindex-slide">
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">Engagement index <span class="accent-teal">za firmu</span></h1>
+<p class="ei-subtitle">v porovnání s benchmarky</p>
+</div>
+<div class="ei-main">
+<div class="ei-card">
+<div class="ei-card-title">Engagement index za firmu</div>
+<div class="ei-kpis">
+<div class="ei-kpi">
+<p class="ei-kpi-head">Úplný engagement</p>
+<p class="ei-kpi-value accent-teal">42&nbsp;%</p>
+<p class="ei-kpi-desc">Úplný engagement reflektuje velmi dobrou atmosféru uvnitř firmy a kladný vztah zaměstnanců k práci i firmě. Za dobrou náladou může stát skupina velmi spokojených zaměstnanců, nebo plošná spokojenost s některými aspekty práce a firemní kultury.</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">Částečný engagement</p>
+<p class="ei-kpi-value accent-grey">33&nbsp;%</p>
+<p class="ei-kpi-desc">Částečný engagement ukazuje na dílčí nedostatky, v nichž spočívá potenciál firmy pro zlepšení. Klíčové je pochopit, zda za výsledky stojí skupina zaměstnanců nebo výsledky některé z konkrétních engagementových otázek. Kompletní obrázek se získá srovnáním s individuální mírou engagementu.</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">Slabý engagement</p>
+<p class="ei-kpi-value accent-pink">25&nbsp;%</p>
+<p class="ei-kpi-desc">Slabý engagement indikuje špatnou atmosféru, která může vést až k odchodu některých zaměstnanců. Opět je důležité určit, zda slabý výsledek ukazuje na skupinu zaměstnanců nebo na plošnou nespokojenost s některými aspekty práce. Ke správnému vyhodnocení je dobré porovnat tento výsledek s individuální mírou engagementu.</p>
+</div>
+</div>
+</div>
+<div class="ei-bench">
+<div class="ei-bench-title">International benchmark</div>
+<div class="ei-bench-item">
+<p class="ei-bench-value">15&nbsp;%</p>
+<p class="ei-bench-label">Czech Republic</p>
+</div>
+<div class="ei-bench-item">
+<p class="ei-bench-value">32&nbsp;%</p>
+<p class="ei-bench-label">U.S.</p>
+</div>
+<div class="ei-bench-item">
+<p class="ei-bench-value">37&nbsp;%</p>
+<p class="ei-bench-label">WHM</p>
+</div>
+<div class="ei-bench-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+# Placeholder: benchmark / comparison plot (optional)
+# ggplot(...) + ...
+```
+</div> 
+</div> 
+</div> 
+<div class="ei-legend"> <p class="ei-legend-label">Škála odpovědí</p> 
+<div class="ei-legend-items"> 
+<div class="ei-legend-item">
+<span class="ei-swatch teal">
+</span>Určitě ano = skóre 1</div> 
+<div class="ei-legend-item">
+<span class="ei-swatch grey1">
+</span>Spíše ano = skóre 2</div>
+<div class="ei-legend-item">
+<span class="ei-swatch grey2"></span>Nemohu se rozhodnout = skóre 3</div>
+<div class="ei-legend-item">
+<span class="ei-swatch pink"></span>Spíše ne = skóre 4</div>
+<div class="ei-legend-item">
+<span class="ei-swatch pinkStrong"></span>Určitě ne = skóre 5</div> 
+</div> 
+</div> 
+</div>
+
+
+
+<!------- Engagement index za firmu ------------------------------>
+
+<div class="slide engindex-firma-ref" aria-label="Engagement index za firmu">
+<div class="ef-top">
+<div class="ef-left-head">
+<p class="ef-kicker">Výsledky</p>
+<h1 class="ef-title">Engagement index <span class="accent-teal">za firmu</span></h1>
+</div>
+<div class="ef-right-head">Engagement se měřil následujícími otázkami:</div>
+</div>
+<div class="ef-main">
+<div class="ef-left">
+<div class="ef-text-block">
+<p>Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dit amet podnadpis</p>
+<div class="ef-brace" aria-hidden="true"></div>
+</div>
+<div class="ef-text-block">
+<p>Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dit amet podnadpis</p>
+<div class="ef-brace" aria-hidden="true"></div>
+</div>
+</div>
+<div class="ef-right">
+<div class="ef-plot">
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-align: "center"
+#| fig-width: 10
+#| fig-height: 6
+
+# PLACEHOLDER — replace with your own ggplot later
+par(mar = c(0,0,0,0))
+plot.new()
+text(0.5, 0.5, "PLOT PLACEHOLDER", cex = 3)
+```
+
+</div> 
+</div> 
+</div> 
+
+<div class="ef-legend" aria-label="Škála odpovědí">
+<span class="ef-legend-label">Škála odpovědí</span>
+<div class="ef-legend-items">
+
+<div class="ef-legend-item">
+<span class="ef-swatch teal"></span>
+<strong>Určitě ano</strong> = skóre 1</div>
+
+<div class="ef-legend-item">
+<span class="ef-swatch grey1"></span>
+<strong>Spíše ano</strong> = skóre 2</div>
+
+<div class="ef-legend-item">
+<span class="ef-swatch grey2"></span>
+<strong>Nemohu se rozhodnout</strong> = skóre 3</div>
+
+<div class="ef-legend-item">
+<span class="ef-swatch pink"></span>
+<strong>Spíše ne</strong> = skóre 4</div>
+
+<div class="ef-legend-item">
+<span class="ef-swatch pinkStrong"></span>
+<strong>Určitě ne</strong> = skóre 5</div>
+
+</div>
+</div>
+</div>
+
+
+<!----------- Individuální míra engagementu výsledky ------------>
+
+<div class="slide engindex-slide indeng-slide" aria-label="Individuální míra engagementu za firmu">
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">Individuální míra engagementu <span class="accent-teal">za firmu</span></h1>
+</div>
+
+<div class="ei-main">
+<div class="ei-card indeng-card">
+<div class="ei-card-title">Engagement index za firmu</div>
+
+<div class="ei-kpis">
+<div class="ei-kpi">
+<p class="ei-kpi-head">Úplný engagement</p>
+<p class="ei-kpi-value accent-teal">42&nbsp;%</p>
+<p class="ei-kpi-desc">Do kategorie <strong>fully engaged</strong> spadají lidé, kteří pracují naplno, svoji práci mají rádi a zároveň mají rádi svého zaměstnavatele.</p>
+</div>
+
+<div class="ei-kpi">
+<p class="ei-kpi-head">Částečný engagement</p>
+<p class="ei-kpi-value accent-grey">33&nbsp;%</p>
+<p class="ei-kpi-desc">V kategorii <strong>částečně engaged</strong> jsou lidé, kteří mají rádi svou firmu, ale občas jim něco na práci nevyhovuje. Z toho důvodu je také jejich výkon proměnlivý a ne tak stabilní. Zároveň tato kategorie představuje největší potenciál pro růst a firma s ní může dobře do budoucna pracovat.</p>
+</div>
+
+<div class="ei-kpi">
+<p class="ei-kpi-head">Slabý engagement</p>
+<p class="ei-kpi-value accent-pink">25&nbsp;%</p>
+<p class="ei-kpi-desc">Zde jsou lidé kteří k firmě a tomu co v ní dělají, mají malý nebo žádný vztah. Mohou zvažovat odchod nebo změnu zaměstnání. Jejich pracovní nasazení je malé a mohou ve svém okolí šířit negativní náladu.</p>
+</div>
+</div>
+</div>
+
+<div class="ei-bench"></div>
+</div>
+
+<div class="ei-legend"></div>
+</div>
+
+
+
+<!----- Srovnání engagement index napříč odděleními ----------------->
+
+
+<div class="slide engindex-slide engindex-oddeleni-slide" 
+     aria-label="Srovnání engagementu indexu napříč odděleními">
+
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">
+Srovnání <span class="accent-teal">engagementu indexu</span> napříč odděleními
+</h1>
+</div>
+
+<div class="oddeleni-main">
+
+<div class="oddeleni-plot">
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-align: "center"
+#| fig-width: 14
+#| fig-height: 6
+
+# PLACEHOLDER – stacked bar comparison plot
+par(mar = c(0,0,0,0))
+plot.new()
+text(0.5, 0.5, "PLOT PLACEHOLDER", cex = 3)
+```
+
+</div> 
+<div class="oddeleni-arrows"> 
+<!--<img src="arrows.png" alt="" aria-hidden="true">-->
+</div>
+</div> 
+
+<div class="ei-legend"> <p class="ei-legend-label">Škála odpovědí</p> 
+<div class="ei-legend-items"> 
+<div class="ei-legend-item"> 
+<span class="ei-swatch teal"></span>
+Fully engaged 
+</div> 
+<div class="ei-legend-item"> 
+<span class="ei-swatch grey2"></span>
+Partially engaged 
+</div>
+<div class="ei-legend-item">
+<span class="ei-swatch pink"></span>
+Disengaged 
+</div> 
+
+</div> 
+</div>
+</div>
+
+
+<!----- Srovnání engagement index napříč odděleními - pokračování ------------->
+
+
+<div class="slide engindex-slide engindex-oddeleni-slide" 
+     aria-label="Srovnání engagementu indexu napříč odděleními">
+
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">
+Srovnání <span class="accent-teal">engagementu indexu</span> napříč odděleními
+</h1>
+</div>
+
+<div class="oddeleni-main">
+
+<div class="oddeleni-plot">
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-align: "center"
+#| fig-width: 14
+#| fig-height: 6
+
+# PLACEHOLDER – stacked bar comparison plot
+par(mar = c(0,0,0,0))
+plot.new()
+text(0.5, 0.5, "PLOT PLACEHOLDER", cex = 3)
+```
+
+</div> 
+<div class="oddeleni-arrows"> 
+<!--<img src="arrows.png" alt="" aria-hidden="true">-->
+</div>
+</div> 
+
+<div class="ei-legend"> <p class="ei-legend-label">Škála odpovědí</p> 
+<div class="ei-legend-items"> 
+<div class="ei-legend-item"> 
+<span class="ei-swatch teal"></span>
+Fully engaged 
+</div> 
+<div class="ei-legend-item"> 
+<span class="ei-swatch grey2"></span>
+Partially engaged 
+</div>
+<div class="ei-legend-item">
+<span class="ei-swatch pink"></span>
+Disengaged 
+</div> 
+
+</div> 
+</div>
+</div>
+
+
+
+
+<!----- Srovnání individuální míry napříč odděleními - pokračování ------------->
+
+
+<div class="slide engindex-slide engindex-oddeleni-slide" 
+     aria-label="Srovnání engagementu indexu napříč odděleními">
+
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">
+Srovnání <span class="accent-teal">individuální míry engagementu</span> napříč odděleními
+</h1>
+</div>
+
+<div class="oddeleni-main">
+
+<div class="oddeleni-plot">
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-align: "center"
+#| fig-width: 14
+#| fig-height: 6
+
+# PLACEHOLDER – stacked bar comparison plot
+par(mar = c(0,0,0,0))
+plot.new()
+text(0.5, 0.5, "PLOT PLACEHOLDER", cex = 3)
+```
+
+</div> 
+<div class="oddeleni-arrows"> 
+<!--<img src="arrows.png" alt="" aria-hidden="true">--->
+</div>
+</div> 
+
+<div class="ei-legend"> <p class="ei-legend-label">Škála odpovědí</p> 
+<div class="ei-legend-items"> 
+<div class="ei-legend-item"> 
+<span class="ei-swatch teal"></span>
+Fully engaged 
+</div> 
+<div class="ei-legend-item"> 
+<span class="ei-swatch grey2"></span>
+Partially engaged 
+</div>
+<div class="ei-legend-item">
+<span class="ei-swatch pink"></span>
+Disengaged 
+</div> 
+
+</div> 
+</div>
+</div>
+
+
+
+<!---- Výsledky driverů sekce ----->
+
+<div class="slide section-slide">
+
+<div class="section-number">03</div>
+
+<div class="section-title">Výsledky klíčových driverů engagementu</div>
+
+<div class="section-description">
+Engagement neexistuje ve vakuu. Výsledky engagementu mohou být značně ovlivněny různými klíčovými tématy, tzv. drivery engagementu. Moduly zařazené do průzkumu jsou aktuálními daty podložené významné drivery engagementu.
+</div>
+
+  <!-- Progress bar -->
+<div class="progress-bar" style="--progress: 30%">
+<div class="progress-bar-fill"></div>
+</div>
+
+</div>
+
+
+
+
+<!------------------ Sledované drivery ------------------------------->
+
+<div class="sledovane-drivery slide">
+<h1 class="header-main">Sledované <span class="accent-teal">drivery</span></h1>
+<p class="header-paragraph">Přehled klíčových faktorů ovlivňujících angažovanost zaměstnanců v naší firmě.</p>
+<div class="text-grid">
+<div class="text-block">
+<h2 class="block-title">Leadership</h2>
+<p class="block-paragraph">Kvalita vedení a podpora od nadřízených má zásadní vliv na spokojenost zaměstnanců.</p>
+</div>
+<div class="text-block">
+<h2 class="block-title">Pracovní prostředí</h2>
+<p class="block-paragraph">Příjemné a bezpečné pracovní prostředí podporuje motivaci a výkon.</p>
+</div>
+<div class="text-block">
+<h2 class="block-title">Možnosti rozvoje</h2>
+<p class="block-paragraph">Přístup k dalšímu vzdělávání a kariérnímu růstu je klíčový pro dlouhodobou angažovanost.</p>
+</div>
+<div class="text-block">
+<h2 class="block-title">Kultura firmy</h2>
+<p class="block-paragraph">Kultura firmy, komunikace a uznání práce také významně ovlivňují angažovanost zaměstnanců.</p>
+</div>
+<div class="text-block">
+<h2 class="block-title">Zpětná vazba</h2>
+<p class="block-paragraph">Pravidelná zpětná vazba a transparentnost jsou důležité pro udržení motivace.</p>
+</div>
+<div class="text-block empty-block" aria-hidden="true"></div>
+</div>
+</div>
+
+
+<!------------------------ Prezentacde driverů --------------------------->
+
+<div class="prezentace-driveru slide">
+<div class="pd-title"><span class="pd-accent">Prezentace</span> driverů</div>
+<div class="pd-lead">Data z modulů prezentujeme na čtyřech úrovních detailu, od <strong>obecných souhrnů</strong> až po podrobné analýzy.</div>
+<div class="pd-cols">
+<div class="pd-col">
+<div class="pd-col-title"><span class="pd-accent">První dvě úrovně</span> (Obecný souhrn) se zaměřují na</div>
+<div class="pd-col-text">odpovědi agregované do širších kategorií (skvělý, průměrný, slabý výsledek). Agregované odpovědi nejprve porovnáváme s externími benchmarky a poté zmapujeme situaci uvnitř firmy.</div>
+</div>
+<div class="pd-col">
+<div class="pd-col-title"><span class="pd-accent">Další dvě úrovně</span> (Podrobné analýzy) se zaměřují na detailní</div>
+<div class="pd-col-text">rozložení odpovědí. Na třetí úrovni uvidíte procentuální podíl odpovědí na každou otázku – od „Určitě ano“ po „Určitě ne“ – na úrovni celé firmy. Čtvrtá úroveň pak ukáže, jak se odpovědi rozdělují mezi jednotlivé organizační jednotky. S každým krokem získáte hlubší přehled o dění ve firmě.</div>
+</div>
+</div>
+<div class="pd-mid">
+<div class="pd-divider">
+<div class="pd-divider-left">
+<div class="pd-divider-title">Obecný souhrn</div>
+<div class="pd-divider-line"></div>
+</div>
+<div class="pd-divider-right">
+<div class="pd-divider-title">Podrobné analýzy</div>
+<div class="pd-divider-line"></div>
+</div>
+</div>
+<div class="pd-agg">
+<div class="pd-agg-left">
+<div class="pd-agg-label">Agregace:</div>
+<div class="pd-agg-text"><strong>Skvělý výsledek</strong> = Určitě ano a Spíše ano,<br><strong>Průměrný výsledek</strong> = Nemohu se rozhodnout,<br><strong>Slabý výsledek</strong> = Určitě ne, Spíše ne</div>
+</div>
+<div class="pd-agg-right">
+<div class="pd-agg-label">Agregace:</div>
+<div class="pd-agg-text">Určitě ano - Spíše ano - Nemohu se rozhodnout - Spíše ne - Určitě ne</div>
+</div>
+</div>
+<div class="pd-bottom">
+<div class="pd-item"><div class="pd-num">1.</div><div class="pd-item-text">Srovnání s benchmarky</div></div>
+<div class="pd-item"><div class="pd-num">2.</div><div class="pd-item-text">Drivery za firmu</div></div>
+<div class="pd-item"><div class="pd-num">3.</div><div class="pd-item-text">Detail otázek</div></div>
+<div class="pd-item"><div class="pd-num">4.</div><div class="pd-item-text">Drivery v detailu za organizační jednotku</div></div>
+</div>
+</div>
+</div>
+
+
+<!---------- Jak číst - výsledky driverů vs benchmarky ---------------------->
+
+<div class="jakcist-dr-bench slide">
+<div class="jdb-header">
+<div class="jdb-header-left">
+<div class="jdb-title">Jak číst?</div>
+<div class="jdb-subtitle">Srovnání driverů s relevantními benchmarky</div>
+</div>
+<div class="jdb-q jdb-q1">?</div>
+<div class="jdb-q jdb-q2">?</div>
+<div class="jdb-q jdb-q3">?</div>
+</div>
+<div class="jdb-lead">
+<p>Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis</p>
+</div>
+<div class="jdb-main">
+<div class="jdb-table" role="img" aria-label="Benchmark comparison table">
+<div class="jdb-row jdb-row-head">
+<div class="jdb-cell jdb-label"></div>
+<div class="jdb-cell jdb-col jdb-col-current"><span>Current - JuicouE</span></div>
+<div class="jdb-cell jdb-col"><span>Czech Republic</span></div>
+<div class="jdb-cell jdb-col"><span>UK</span></div>
+</div>
+<div class="jdb-row">
+<div class="jdb-cell jdb-label"><span>Engagement</span></div>
+<div class="jdb-cell jdb-val jdb-col-current"><span>81 %</span></div>
+<div class="jdb-cell jdb-val"><span>78 %</span></div>
+<div class="jdb-cell jdb-val"><span>88 %</span></div>
+</div>
+<div class="jdb-row">
+<div class="jdb-cell jdb-label"><span>Leadership</span></div>
+<div class="jdb-cell jdb-val jdb-col-current"><span>78 %</span></div>
+<div class="jdb-cell jdb-val"><span>98 %</span></div>
+<div class="jdb-cell jdb-val"><span>78 %</span></div>
+</div>
+<div class="jdb-row">
+<div class="jdb-cell jdb-label"><span>Values</span></div>
+<div class="jdb-cell jdb-val jdb-col-current"><span>87 %</span></div>
+<div class="jdb-cell jdb-val"><span>63 %</span></div>
+<div class="jdb-cell jdb-val"><span>78 %</span></div>
+</div>
+<div class="jdb-row">
+<div class="jdb-cell jdb-label"><span>Share</span></div>
+<div class="jdb-cell jdb-val jdb-col-current"><span>67 %</span></div>
+<div class="jdb-cell jdb-val"><span>88 %</span></div>
+<div class="jdb-cell jdb-val"><span>76 %</span></div>
+</div>
+<div class="jdb-row jdb-row-last">
+<div class="jdb-cell jdb-label jdb-respondents"><span>Respondentů</span></div>
+<div class="jdb-cell jdb-val jdb-col-current"><span>1000</span></div>
+<div class="jdb-cell jdb-val"><span>203</span></div>
+<div class="jdb-cell jdb-val"><span>30</span></div>
+</div>
+</div>
+</div>
+</div>
+
+
+
+<!------------------ Jak číst - driver celkem --------------------------->
+
+
+
+<div class="jakcist-dr-celkem slide">
+<div class="jdc-header">
+<div class="jdc-header-left">
+<div class="jdc-title">Jak číst?</div>
+<div class="jdc-subtitle">Výsledky driveru za firmu</div>
+</div>
+<div class="jdc-q jdc-q1">?</div>
+<div class="jdc-q jdc-q2">?</div>
+<div class="jdc-q jdc-q3">?</div>
+</div>
+<div class="jdc-lead">
+<p>Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis</p>
+</div>
+<div class="jdc-main">
+<div class="jdc-topbars">
+<div class="jdc-topbar">
+<div class="jdc-bar jdc-bar-teal"><span>15&nbsp;%</span></div>
+<div class="jdc-bar-text">Podíl odpovědí <strong><em>Určitě ano</em></strong><br>a <strong><em>Spíše ano</em></strong> na všech<br>odpovědích driveru</div>
+</div>
+<div class="jdc-topbar">
+<div class="jdc-bar jdc-bar-grey"><span>100&nbsp;%</span></div>
+<div class="jdc-bar-text">Podíl odpovědí <strong><em>Nemohu se</em></strong><br><strong><em>rozhodnout</em></strong> na všech odpovědích<br>driveru</div>
+</div>
+<div class="jdc-topbar">
+<div class="jdc-bar jdc-bar-pink"><span>10&nbsp;%</span></div>
+<div class="jdc-bar-text">Podíl odpovědí <strong><em>Určitě</em></strong><br><strong><em>ne</em></strong> a <strong><em>Spíše ne</em></strong> na všech<br>odpovědích driveru</div>
+</div>
+</div>
+<div class="jdc-bottom">
+<div class="jdc-leftcallout">
+<div class="jdc-leftcallout-text">Podíl odpovědí <strong><em>Určitě ano</em></strong> a <strong><em>Spíše ano</em></strong><br>na všech za danou otázku</div>
+<div class="jdc-leftcallout-arrow" aria-hidden="true"></div>
+</div>
+<div class="jdc-rightlist">
+<div class="jdc-item"><div class="jdc-pct">88&nbsp;%</div><div class="jdc-item-text">Můj vedoucí zadává úkoly jasně a přesně.</div></div>
+<div class="jdc-item"><div class="jdc-pct">88&nbsp;%</div><div class="jdc-item-text">Mám dobrý vztah se svým vedoucím.</div></div>
+<div class="jdc-item"><div class="jdc-pct">88&nbsp;%</div><div class="jdc-item-text">V pracovních otázkách mě vedoucí vždy vyslyší a dá prostor k vyjádření.</div></div>
+<div class="jdc-item"><div class="jdc-pct">88&nbsp;%</div><div class="jdc-item-text">Dostávám pravidelnou zpětnou vazbu od mého vedoucího.</div></div>
+<div class="jdc-item"><div class="jdc-pct">88&nbsp;%</div><div class="jdc-item-text">Můj vedoucí mě dostatečně motivuje v mé práci.</div></div>
+</div>
+</div>
+</div>
+<div class="jdc-legend">
+<div class="jdc-legend-label">Škála odpovědí</div>
+<div class="jdc-legend-items">
+<div class="jdc-legend-item"><span class="jdc-swatch teal"></span><strong>Určitě ano</strong>&nbsp;=&nbsp;skóre&nbsp;1</div>
+<div class="jdc-legend-item"><span class="jdc-swatch tealLight"></span><strong>Spíše ano</strong>&nbsp;=&nbsp;skóre&nbsp;2</div>
+<div class="jdc-legend-item"><span class="jdc-swatch grey"></span><strong>Nemohu se rozhodnout</strong>&nbsp;=&nbsp;skóre&nbsp;3</div>
+<div class="jdc-legend-item"><span class="jdc-swatch pink"></span><strong>Spíše ne</strong>&nbsp;=&nbsp;skóre&nbsp;4</div>
+<div class="jdc-legend-item"><span class="jdc-swatch pinkStrong"></span><strong>Určitě ne</strong>&nbsp;=&nbsp;skóre&nbsp;5</div>
+</div>
+</div>
+</div>
+
+
+
+<!---------- Jak číst - drivery detail otázky --------------------------->
+
+<div class="jakcist-dr-detail slide">
+<div class="jdd-header">
+<div class="jdd-header-left">
+<div class="jdd-title">Jak číst?</div>
+<div class="jdd-subtitle">Detail otázky</div>
+</div>
+<div class="jdd-q jdd-q1">?</div>
+<div class="jdd-q jdd-q2">?</div>
+<div class="jdd-q jdd-q3">?</div>
+</div>
+<div class="jdd-lead">
+<p>Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis</p>
+</div>
+<div class="jdd-main">
+<div class="jdd-bars">
+<div class="jdd-bar-row">
+<div class="jdd-row-label">Otázka 01</div>
+<div class="jdd-bar">
+<div class="jdd-seg s1"><span>88 %</span></div>
+<div class="jdd-seg s2"><span>88 %</span></div>
+<div class="jdd-seg s3"><span>88 %</span></div>
+<div class="jdd-seg s4"><span>88 %</span></div>
+<div class="jdd-seg s5"><span>88 %</span></div>
+</div>
+</div>
+<div class="jdd-bar-row">
+<div class="jdd-row-label">Otázka 02</div>
+<div class="jdd-bar">
+<div class="jdd-seg s1"><span>88 %</span></div>
+<div class="jdd-seg s2"><span>88 %</span></div>
+<div class="jdd-seg s3"><span>88 %</span></div>
+<div class="jdd-seg s4"><span>88 %</span></div>
+<div class="jdd-seg s5"><span>88 %</span></div>
+</div>
+</div>
+<div class="jdd-underlabels">
+<div class="jdd-underlabel">Podíl odpovědí<br><strong><em>Určitě</em></strong><br><strong>ano</strong> na danou otázku</div>
+<div class="jdd-underlabel">Podíl odpovědí<br><strong><em>Spíše</em></strong> ano na<br>danou otázku</div>
+<div class="jdd-underlabel">Podíl odpovědí<br><strong><em>Nemohu se</em></strong><br><strong><em>rozhodnout</em></strong> na<br>danou otázku</div>
+<div class="jdd-underlabel">Podíl odpovědí<br><strong><em>Spíše</em></strong> ne na danou<br>otázku</div>
+<div class="jdd-underlabel">Podíl odpovědí<br><strong><em>Určitě</em></strong> ne na<br>danou otázku</div>
+</div>
+</div>
+</div>
+<div class="jdd-legend">
+<div class="jdd-legend-label">Škála odpovědí</div>
+<div class="jdd-legend-items">
+<div class="jdd-legend-item"><span class="jdd-swatch s1"></span><strong>Určitě ano</strong> = skóre 1</div>
+<div class="jdd-legend-item"><span class="jdd-swatch s2"></span><strong>Spíše ano</strong> = skóre 2</div>
+<div class="jdd-legend-item"><span class="jdd-swatch s3"></span><strong>Nemohu se rozhodnout</strong> = skóre 3</div>
+<div class="jdd-legend-item"><span class="jdd-swatch s4"></span><strong>Spíše ne</strong> = skóre 4</div>
+<div class="jdd-legend-item"><span class="jdd-swatch s5"></span><strong>Určitě ne</strong> = skóre 5</div>
+</div>
+</div>
+</div>
+
+
+<!-------- Výsledky - driver v porovnání s benchmarky ------------------->
+
+
+<div class="vysledky-dr-bench slide">
+<div class="vdb-kicker">Výsledky</div>
+<div class="vdb-h1">Srovnání <span class="accent-teal">driverů</span> s relevantními benchmarky</div>
+<div class="vdb-lead">
+<p>Pro přehlednost srovnáváme pouze agregaci otázek <em>Určitě ano</em> a <em>Spíše ano</em></p>
+</div>
+<div class="vdb-main">
+<div class="vdb-table">
+<div class="vdb-row vdb-row-head">
+<div class="vdb-cell vdb-label"></div>
+<div class="vdb-cell vdb-col"><span>Current</span></div>
+<div class="vdb-cell vdb-col"><span>Benchmark 1</span></div>
+<div class="vdb-cell vdb-col"><span>Benchmark 2</span></div>
+<div class="vdb-cell vdb-col vdb-col-empty"></div>
+<div class="vdb-cell vdb-col vdb-col-empty"></div>
+</div>
+<div class="vdb-row">
+<div class="vdb-cell vdb-label">Engagement</div>
+<div class="vdb-cell vdb-val vdb-col-current">81%</div>
+<div class="vdb-cell vdb-val">78%</div>
+<div class="vdb-cell vdb-val">88%</div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+</div>
+<div class="vdb-row">
+<div class="vdb-cell vdb-label">Leadership</div>
+<div class="vdb-cell vdb-val vdb-col-current">78%</div>
+<div class="vdb-cell vdb-val">98%</div>
+<div class="vdb-cell vdb-val">78%</div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+</div>
+<div class="vdb-row">
+<div class="vdb-cell vdb-label">Values</div>
+<div class="vdb-cell vdb-val vdb-col-current">87%</div>
+<div class="vdb-cell vdb-val">63%</div>
+<div class="vdb-cell vdb-val">78%</div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+</div>
+<div class="vdb-row">
+<div class="vdb-cell vdb-label">Share</div>
+<div class="vdb-cell vdb-val vdb-col-current">67%</div>
+<div class="vdb-cell vdb-val">88%</div>
+<div class="vdb-cell vdb-val">76%</div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+</div>
+<div class="vdb-row vdb-row-last">
+<div class="vdb-cell vdb-label vdb-respondents"><span class="vdb-ico" aria-hidden="true"></span>Respondentů</div>
+<div class="vdb-cell vdb-val">1000</div>
+<div class="vdb-cell vdb-val">203</div>
+<div class="vdb-cell vdb-val">30</div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+<div class="vdb-cell vdb-val vdb-col-empty"></div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!----------------- Výsledky - driver celkem ---------------------------->
+
+<div class="vysledky-dr-celkem slide">
+<div class="vdc-kicker">Výsledky</div>
+<div class="vdc-title">Drivery za firmu</div>
+<div class="vdc-cols">
+<div class="vdc-col">
+<div class="vdc-col-title">Top 3</div>
+<div class="vdc-block">
+<div class="vdc-block-title">Já a firma</div>
+<div class="vdc-bar">
+<div class="vdc-seg vdc-teal" style="width:75%"><span>75%</span></div>
+<div class="vdc-seg vdc-grey" style="width:16%"><span>16%</span></div>
+<div class="vdc-seg vdc-yellow" style="width:9%"><span>9%</span></div>
+</div>
+<div class="vdc-list">
+<div class="vdc-item"><span class="vdc-pct">64&nbsp;%</span><span class="vdc-txt">Znám firemní cíle.</span></div>
+<div class="vdc-item"><span class="vdc-pct">71&nbsp;%</span><span class="vdc-txt">Pro tuto firmu je rozhodně dobré pracovat.</span></div>
+<div class="vdc-item"><span class="vdc-pct">89&nbsp;%</span><span class="vdc-txt">Pracovní prostředí je bez šikany a obtěžování.</span></div>
+<div class="vdc-item"><span class="vdc-pct">75&nbsp;%</span><span class="vdc-txt">Doporučuji tuto firmu jako zaměstnavatele.</span></div>
+</div>
+</div>
+<div class="vdc-block">
+<div class="vdc-block-title">Já a vedoucí</div>
+<div class="vdc-bar">
+<div class="vdc-seg vdc-teal" style="width:79%"><span>79%</span></div>
+<div class="vdc-seg vdc-grey" style="width:12%"><span>12%</span></div>
+<div class="vdc-seg vdc-yellow" style="width:9%"><span>9%</span></div>
+</div>
+<div class="vdc-list">
+<div class="vdc-item"><span class="vdc-pct">79&nbsp;%</span><span class="vdc-txt">Můj vedoucí mi zadává úkoly jasně a přesně.</span></div>
+<div class="vdc-item"><span class="vdc-pct">89&nbsp;%</span><span class="vdc-txt">Mám dobrý vztah se svým vedoucím.</span></div>
+<div class="vdc-item"><span class="vdc-pct">85&nbsp;%</span><span class="vdc-txt">V pracovních otázkách mě vedoucí vždy vyslyší a dá prostor k vyjádření.</span></div>
+<div class="vdc-item"><span class="vdc-pct">70&nbsp;%</span><span class="vdc-txt">Dostávám pravidelnou zpětnou vazbu od mého vedoucího.</span></div>
+<div class="vdc-item"><span class="vdc-pct">73&nbsp;%</span><span class="vdc-txt">Dostávám reálnou podporu od svého vedoucího.</span></div>
+</div>
+</div>
+<div class="vdc-block">
+<div class="vdc-block-title">Já a tým</div>
+<div class="vdc-bar">
+<div class="vdc-seg vdc-teal" style="width:77%"><span>77%</span></div>
+<div class="vdc-seg vdc-grey" style="width:14%"><span>14%</span></div>
+<div class="vdc-seg vdc-yellow" style="width:9%"><span>9%</span></div>
+</div>
+<div class="vdc-list">
+<div class="vdc-item"><span class="vdc-pct">85&nbsp;%</span><span class="vdc-txt">Svým kolegům/kolegyním důvěřuji.</span></div>
+<div class="vdc-item"><span class="vdc-pct">88&nbsp;%</span><span class="vdc-txt">Já a kolegové z mého oddělení řešíme problémy tak, aby se již neopakovaly.</span></div>
+<div class="vdc-item"><span class="vdc-pct">85&nbsp;%</span><span class="vdc-txt">Na mém oddělení se dokážeme bavit o chybách a efektivně je řešit.</span></div>
+<div class="vdc-item"><span class="vdc-pct">83&nbsp;%</span><span class="vdc-txt">Cíle mého oddělení jsou mi jasné.</span></div>
+<div class="vdc-item"><span class="vdc-pct">45&nbsp;%</span><span class="vdc-txt">Mé oddělení dostává dostatečnou podporu od oddělení, se kterými spolupracujeme.</span></div>
+</div>
+</div>
+</div>
+<div class="vdc-col">
+<div class="vdc-col-title">Bottom 3</div>
+<div class="vdc-block">
+<div class="vdc-block-title">Já a firma</div>
+<div class="vdc-bar">
+<div class="vdc-seg vdc-teal" style="width:75%"><span>75%</span></div>
+<div class="vdc-seg vdc-grey" style="width:16%"><span>16%</span></div>
+<div class="vdc-seg vdc-yellow" style="width:9%"><span>9%</span></div>
+</div>
+<div class="vdc-list">
+<div class="vdc-item"><span class="vdc-pct">64&nbsp;%</span><span class="vdc-txt">Znám firemní cíle.</span></div>
+<div class="vdc-item"><span class="vdc-pct">71&nbsp;%</span><span class="vdc-txt">Pro tuto firmu je rozhodně dobré pracovat.</span></div>
+<div class="vdc-item"><span class="vdc-pct">89&nbsp;%</span><span class="vdc-txt">Pracovní prostředí je bez šikany a obtěžování.</span></div>
+<div class="vdc-item"><span class="vdc-pct">75&nbsp;%</span><span class="vdc-txt">Doporučuji tuto firmu jako zaměstnavatele.</span></div>
+</div>
+</div>
+<div class="vdc-block">
+<div class="vdc-block-title">Já a vedoucí</div>
+<div class="vdc-bar">
+<div class="vdc-seg vdc-teal" style="width:79%"><span>79%</span></div>
+<div class="vdc-seg vdc-grey" style="width:12%"><span>12%</span></div>
+<div class="vdc-seg vdc-yellow" style="width:9%"><span>9%</span></div>
+</div>
+<div class="vdc-list">
+<div class="vdc-item"><span class="vdc-pct">79&nbsp;%</span><span class="vdc-txt">Můj vedoucí mi zadává úkoly jasně a přesně.</span></div>
+<div class="vdc-item"><span class="vdc-pct">89&nbsp;%</span><span class="vdc-txt">Mám dobrý vztah se svým vedoucím.</span></div>
+<div class="vdc-item"><span class="vdc-pct">85&nbsp;%</span><span class="vdc-txt">V pracovních otázkách mě vedoucí vždy vyslyší a dá prostor k vyjádření.</span></div>
+<div class="vdc-item"><span class="vdc-pct">70&nbsp;%</span><span class="vdc-txt">Dostávám pravidelnou zpětnou vazbu od mého vedoucího.</span></div>
+<div class="vdc-item"><span class="vdc-pct">73&nbsp;%</span><span class="vdc-txt">Dostávám reálnou podporu od svého vedoucího.</span></div>
+</div>
+</div>
+<div class="vdc-block">
+<div class="vdc-block-title">Já a tým</div>
+<div class="vdc-bar">
+<div class="vdc-seg vdc-teal" style="width:77%"><span>77%</span></div>
+<div class="vdc-seg vdc-grey" style="width:14%"><span>14%</span></div>
+<div class="vdc-seg vdc-yellow" style="width:9%"><span>9%</span></div>
+</div>
+<div class="vdc-list">
+<div class="vdc-item"><span class="vdc-pct">85&nbsp;%</span><span class="vdc-txt">Svým kolegům/kolegyním důvěřuji.</span></div>
+<div class="vdc-item"><span class="vdc-pct">88&nbsp;%</span><span class="vdc-txt">Já a kolegové z mého oddělení řešíme problémy tak, aby se již neopakovaly.</span></div>
+<div class="vdc-item"><span class="vdc-pct">85&nbsp;%</span><span class="vdc-txt">Na mém oddělení se dokážeme bavit o chybách a efektivně je řešit.</span></div>
+<div class="vdc-item"><span class="vdc-pct">83&nbsp;%</span><span class="vdc-txt">Cíle mého oddělení jsou mi jasné.</span></div>
+<div class="vdc-item"><span class="vdc-pct">45&nbsp;%</span><span class="vdc-txt">Mé oddělení dostává dostatečnou podporu od oddělení, se kterými spolupracujeme.</span></div>
+</div>
+</div>
+</div>
+</div>
+<div class="vdc-foot">Úvod – Úroveň engagementu – <span class="vdc-foot-accent">Zkoumaná témata</span> (Já a firma – Já a vedoucí – Já a tým) – Srovnání oddělení</div>
+</div>
+

@@ -1,0 +1,876 @@
+/* ---- Fonts ---- */
+@font-face {
+  font-family: "Europa Bold";
+  src: local("EuropaGroNr2JU Bold");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Europa Regular";
+  src: local("EuropaGroNr2JU Regular");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ArialNova";
+  src: local("ArialNova");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ArialNova";
+  src: local("ArialNova-Bold");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+
+/* --------- Variables & base --------- */
+:root{
+  --accent: #63e8c6;
+  --accent-light: #e1faf4;
+  --accent-transparent:#63e8c659;
+  --black: #000000;
+  --page-bg: #ffffff;
+  --transparent-white: #ffffff59;
+  --light-grey: #d1d1d1;
+  --normal-grey: #a5a5a5;
+  --grey-transparent: #a5a5a559;
+  --yellow: #ffd06b;
+  --yellow-light:#ffedc3;
+  --yellow-transparent: #ffd06b59;
+  --Europa-Bold: "Europa Bold", sans-serif;  
+  --Europa-Regular: "Europa Regular", sans-serif;
+  --ArialNova-Bold: "ArialNova", sans-serif;
+  --ArialNova: "ArialNova", sans-serif;
+}
+
+/* base – common to both screen & print */
+/* PowerPoint-like page box: 1920x1080, no margins */
+@page {
+  size: 1920px 1080px;
+  margin: 0;
+}
+html, body {
+  background: var(--page-bg);
+  margin: 0;
+  padding: 0;
+}
+
+
+.slide {
+  width: 1920px;            /* use full printable width */
+  height: 1080px;           /* let height grow as needed */
+  page-break-after: always;
+  break-after: page;
+  page-break-inside: avoid;
+  break-inside: avoid-page;
+}
+
+
+
+
+
+
+
+/* One-page “slide” that fills the page box exactly */
+.intro-slide {
+  display: grid;
+  grid-template-rows: 1fr auto auto 1fr;
+  align-items: center;
+  justify-items: center;
+  gap: 1.6rem;
+  color: var(--black);
+}
+
+
+/* Top pill */
+.top-badge{ align-self: end; }
+.pill{
+  display: inline-block;
+  padding: 0.6rem 1.5rem;
+  border: 2px solid var(--accent);
+  border-radius: 9999px;
+  font-family: var(--Europa-Regular);
+  font-size: 36px;      /* fixed sizes suit paged PDF best */
+  line-height: 1.1;
+  color: var(--black);
+  background: #fff;
+}
+
+/* Headline */
+.main{
+  margin: 0;
+  text-align: center;
+  font-family: var(--Europa-Bold);
+  letter-spacing: -0.02em;
+  font-size: 160px;     /* sized for 1920×1080 */
+  line-height: 0.95;
+}
+.accent{ color: var(--accent); }
+
+
+/* Subtitle + reserved logo space */
+.subtitle-wrap{
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+.subtitle{
+  margin: 0;
+  font-family: var(--Europa-Regular);
+  font-size: 64px;
+  color: var(--black);
+}
+/* Keep space for your blurred logo to be added later */
+.reserved-logo-space{
+  width: 80px;
+  height: 80px;
+}
+
+/* Bottom-left brand logo */
+.brand-logo{
+  position: absolute;
+  left: 48px;
+  bottom: 40px;
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Optional: scale for on-screen preview if your browser window is smaller */
+@media screen and (max-width: 1920px){
+  .intro-slide{
+    transform-origin: top left;
+    transform: scale(calc(100vw / 1920));
+    height: calc(1080px * (100vw / 1920));
+  }
+}
+
+
+/* ---------- Agenda slide ---------- */
+.agenda-slide {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 140px 180px;
+  background: var(--accent);
+  color: var(--black);
+}
+
+/* Left content column */
+.agenda-content{
+display: flex;
+flex-direction: column;
+gap: 56px;
+}
+
+/* Title */
+.agenda-title{
+margin: 0;
+font-family: var(--Europa-Bold);
+font-size: 80px;
+line-height: 1.05;
+color: #ffffff;
+}
+
+/* List */
+.agenda-list{
+list-style: none;
+margin: 0;
+padding: 0;
+display: flex;
+flex-direction: column;
+gap: 30px;
+}
+
+.agenda-item{
+display: flex;
+align-items: baseline;
+gap: 36px;
+}
+
+.agenda-num{
+min-width: 60px;
+font-family: var(--Europa-Bold);
+font-size: 40px;
+color: #ffffff;
+}
+
+.agenda-text{
+font-family: var(--Europa-Regular);
+font-size: 40px;
+color: var(--black);
+}
+
+/* Progress bar */
+.progress-bar {
+  position: absolute;
+  top: 10%;          /* distance from top of slide */
+  bottom: 10%;       /* distance from bottom of slide */
+  right: 60px;       /* distance from right edge */
+  width: 16px;
+  border-radius: 999px;
+  background: var(--transparent-white);  /* empty track */
+  overflow: hidden;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.progress-bar-fill {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  background: #ffffff;      /* filled part */
+  border-radius: 999px;
+  height: var(--progress, 0%);  /* default 0%, overridden per slide */
+}
+
+/* Optional: preview scaling for all slides */
+@media screen and (max-width: 1920px){
+.slide{
+transform-origin: top left;
+transform: scale(calc(100vw / 1920));
+height: calc(1080px * (100vw / 1920));
+}
+}
+
+
+
+/* ---------- Section slide ---------- */
+.section-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 120px 180px;
+  background: var(--accent);
+  color: var(--black);
+  text-align: center;
+  position: relative;
+}
+
+/* Section number pill */
+.section-number {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 80px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  font-family: var(--Europa-Bold);
+  font-size: 90px;
+  color: #ffffff;
+  margin-bottom: 60px;
+}
+
+/* Title */
+.section-title {
+  font-family: var(--Europa-Bold);
+  font-size: 100px;
+  color: #ffffff;
+  margin: 0 0 40px 0;
+}
+
+/* Subtitle paragraph */
+.section-description {
+  font-family: var(--Europa-Regular);
+  font-size: 36px;
+  line-height: 1.35;
+  max-width: 1200px;
+  color: var(--black);
+}
+
+
+/* ---------- Průzkum v číslech ---------- */
+.survey-numbers-slide {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1.1fr 2.4fr 1.6fr;  /* left / middle / right */
+  column-gap: 5px;
+  row-gap: 10px;
+  padding: 40px 100px 40px 100px;
+  background: #ffffff;
+  color: var(--black);
+  align-items: start;
+}
+
+/* Title across the top */
+.survey-title {
+  grid-column: 1 / -1;
+  margin: 0 0 10px 0;
+  font-family: var(--Europa-Bold);
+  font-size: 64px;
+}
+
+/* Left column with basic info numbers */
+.survey-kpis {
+  grid-row: 2;
+  grid-column: 1;
+  border-top: 2px dashed var(--light-grey);
+  padding: 32px 16px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.survey-kpi-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.survey-kpi-number {
+  font-family: var(--Europa-Bold);
+  font-size: 55px;
+}
+
+.survey-kpi-unit {
+  font-family: var(--Europa-Bold);
+  font-size: 30px;
+}
+
+.survey-kpi-text {
+  font-family: var(--ArialNova);
+  font-size: 25px;
+  line-height: 1.5;
+}
+
+/* Middle column with two stacked charts */
+.survey-main {
+  grid-row: 2;
+  grid-column: 2;
+  padding: 0px 0px 0px 0px; /* 24 32 28 32 */
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+.survey-box-title {
+  font-family: var(--Europa-Bold);
+  font-size: 36px;
+  margin-bottom: 8px;
+  margin-left: 8px;
+}
+
+.survey-box {
+  border-top: 2px dashed var(--light-grey);       /* internal divider if needed */
+  border-right: 2px dashed var(--light-grey) ;
+  border-left: 2px dashed var(--light-grey);
+  padding-top: 24px;
+}
+
+
+
+/* Right column with two stacked horizontal bar charts */
+.survey-right {
+  grid-row: 2;
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+.survey-right-box {
+  border-top: 2px dashed var(--light-grey);
+  padding: 24px 28px 16px 0px;
+}
+
+/* Generic plot/image styling inside panels */
+.survey-plot {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+
+
+/* ---------- Metriky engagementu slide ---------- */
+.metrics-slide {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: #ffffff;
+  height: 1080px;
+  width: 1920px;
+}
+
+/* Top coloured band */
+.metrics-hero {
+  grid-row: 1;
+  background: var(--accent);
+  padding: 40px 160px 40px 160px;
+}
+
+.metrics-title {
+margin: 0 0 8px 0;
+font-family: var(--Europa-Bold);
+font-size: 80px;
+color: var(--page-bg);
+}
+
+.metrics-intro {
+max-width: 1050px;
+margin: 0;
+font-family: var(--ArialNova);
+font-size: 28px;
+line-height: 1.5;
+}
+
+/* Bottom white part with three columns */
+.metrics-content {
+  grid-row: 2;
+  padding: 32px 160px 32px 160px;  /* was 40 / 160 / 120 / 160 */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 120px;
+  align-items: start;
+}
+
+.metrics-item {
+font-family: var(--ArialNova);
+font-size: 21px;
+line-height: 1.5;
+}
+
+.metrics-number {
+font-family: var(--Europa-Bold);
+font-size: 32px;
+color: var(--accent);
+margin-bottom: 4px;
+}
+
+.metrics-heading {
+font-family: var(--Europa-Bold);
+font-size: 32px;
+margin: 0 0 8px 0;
+}
+
+
+/* ---------- Jak číst – Engagement index slide ---------- */
+
+.engindex-slide {
+  display: grid;
+  grid-template-rows: auto 1fr auto;    /* hero, main content, legend */
+  grid-template-columns: 1fr 1fr;
+  padding: 48px 160px 56px 160px;
+  column-gap: 80px;
+  row-gap: 60px;
+  background: var(--page-bg);
+  box-sizing: border-box;
+}
+
+/* -------- Hero row (top strip) -------- */
+
+.engindex-hero {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.engindex-header-pill {
+  position: relative;
+  flex: 1;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  padding: 18px 40px 20px 42px;
+  border: 3px solid var(--accent);
+  border-radius: 40px;
+  box-sizing: border-box;
+}
+
+.engindex-label {
+  position: absolute;
+  top: 0;
+  left: 40px;
+  transform: translateY(-55%);
+  font-family: var(--Europa-Regular);
+  font-size: 36px;
+  color: var(--accent);
+  margin-right: 40px;
+  background: var(--page-bg);
+  padding: 0px 2px 0px 2px;
+}
+
+.engindex-main-title {
+  flex: 1;
+  margin: 0;
+  font-family: var(--Europa-Bold);
+  font-size: 80px;
+  line-height: 1.02;
+}
+
+.engindex-help {
+  height: 120px;
+  aspect-ratio: 1/1;
+  border-radius: 28px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--Europa-Bold);
+  font-size: 80px;
+  color: var(--page-bg);
+}
+
+/* Main content row */
+
+.engindex-content {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* left / right */
+  grid-auto-rows: auto;            /* two content rows */
+  column-gap: 80px;
+  row-gap: 32px;
+  align-items: start;
+  position: relative;
+}
+
+/* Left column (company index) */
+.engindex-left {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  /*border-right: 2px dashed var(--light-grey);*/
+  padding-right: 80px;
+}
+
+/* Right column (question index + bar) */
+.engindex-right {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-left: 40px;
+}
+
+.engindex-dashed-line {
+  position: absolute;
+  top: 0;  /* Position it directly under the content */
+  bottom: 0;
+  left: 48%;
+  width: 2px;
+  height: 100%;
+  border-left: 3px dashed var(--light-grey);
+  z-index: 1;
+}
+
+.engindex-left-expl {
+  grid-row: 2;
+  grid-column: 1;
+  padding-right: 80px;
+  display: flex;
+  flex-direction: column;
+  /*border-right: 2px dashed var(--light-grey);*/
+  gap: 12px;
+}
+
+.engindex-right-expl {
+  grid-row: 2;
+  grid-column: 2;
+  padding-left: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Common text styles */
+.engindex-subtitle {
+  font-family: var(--Europa-Bold);
+  font-size: 36px;
+  margin: 0;
+}
+
+.engindex-text {
+  font-family: var(--ArialNova);
+  font-size: 28px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Row with three percentages on the left */
+.engindex-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  column-gap: 64px;
+}
+
+.engindex-stat-label {
+  font-family: var(--ArialNova);
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.engindex-stat-number {
+  font-family: var(--Europa-Bold);
+  font-size: 48px;
+}
+
+.engindex-stat-number.full {
+  color: var(--accent);      /* green */
+}
+.engindex-stat-number.partial {
+  color: var(--normal-grey);            /* grey */
+}
+.engindex-stat-number.weak {
+  color: var(--yellow);            /* yellow */
+}
+
+/* Title above the R bar */
+.engindex-bar-title {
+  font-family: var(--Europa-Bold);
+  font-size: 32px;
+  margin: 0;
+}
+
+/* Wrapper for the R ggplot */
+.engindex-right-plot {
+  width: 100%;
+}
+
+/* Remove figure margins & make plot fill the column */
+.engindex-right-plot figure {
+  margin-top: 50px;
+}
+
+.engindex-right-plot img.engindex-plot {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* -------- Legend row (bottom strip) -------- */
+
+.engindex-legend {
+  grid-row: 4;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  font-family: var(--ArialNova);
+  font-size: 20px;
+}
+
+.engindex-legend-label {
+  margin-right: 8px;
+}
+
+.engindex-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engindex-legend-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.engindex-legend-swatch.full {
+  background: var(--accent);
+}
+.engindex-legend-swatch.partial {
+  background: var(--normal-grey)
+}
+.engindex-legend-swatch.weak {
+  background: var(--yellow);
+}
+
+
+
+/* ---------- Jak číst – Individuální míra engagementu slide ---------- */
+
+.indeng-slide {
+  display: grid;
+  grid-template-rows: auto 1fr auto;   /* hero, content, bottom scale legend */
+  grid-template-columns: 1fr 1fr;  /* left chart, right text */
+  padding: 48px 160px 56px 160px;
+  column-gap: 40px;
+  row-gap: 40px;
+  background: var(--page-bg);
+  box-sizing: border-box;
+}
+
+.indeng-slide .engindex-hero {
+  grid-row: 1;
+  grid-column: 1 / -1;
+}
+
+
+.indeng-content {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 2.2fr 1.2fr;  /* left chart / right text */
+  column-gap: 40px;
+  align-items: start;
+}
+
+/* Content row (under hero) */
+.indeng-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+}
+
+.indeng-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Re-use engindex text styles */
+.indeng-subtitle {
+  font-family: var(--Europa-Bold);
+  font-size: 36px;
+  margin: 0;
+}
+
+.indeng-text {
+  font-family: var(--ArialNova);
+  font-size: 28px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Plot wrapper on the left */
+.indeng-plot-wrap {
+  width: 100%;
+}
+
+.indeng-plot-wrap figure {
+  margin: 0;
+}
+
+.indeng-plot-wrap img.indeng-plot {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Legend for current vs previous survey (under chart, still in left column) */
+
+.indeng-series-legend {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  font-family: var(--ArialNova);
+  font-size: 20px;
+  margin-left: 72px;
+}
+
+.indeng-series-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Row of 3 colour squares */
+.indeng-series-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+
+.indeng-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.indeng-swatch.full {
+  background: var(--accent);    
+}
+.indeng-swatch.partial {
+  background: var(--normal-grey);    
+}
+.indeng-swatch.weak {
+  background: var(--yellow);     
+}
+
+.indeng-swatch.full-light {
+  background: var(--accent-transparent);     
+}
+.indeng-swatch.partial-light {
+  background: var(--grey-transparent);     
+}
+.indeng-swatch.weak-light {
+  background: var(--yellow-transparent)     
+}
+
+
+
+
+
+/* -------- Bottom scale legend (5 colours, full width) -------- */
+
+.indeng-scale-legend {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  font-family: var(--ArialNova);
+  font-size: 20px;
+}
+
+.indeng-scale-label {
+  margin-right: 8px;
+}
+
+.indeng-scale-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.indeng-scale-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* Score colours 1–5 */
+.indeng-scale-swatch.score1 { background: var(--accent); }        
+.indeng-scale-swatch.score2 { background: var(--accent-light); }  
+.indeng-scale-swatch.score3 { background: var(--normal-grey); }   
+.indeng-scale-swatch.score4 { background: var(--yellow-light); }  
+.indeng-scale-swatch.score5 { background: var(--yellow); }        
+
+.engindex-slide,
+.indeng-slide {
+  align-content: start;   
+  grid-auto-rows: auto;   
+}
+
+
+/* Debug pro rozložení stránky */
+
+.engindex-slide,
+.indeng-slide,
+.agenda-slide{
+  outline: 2px solid red;
+}
+
+/*
+.engindex-hero,
+.indeng-slide .engindex-hero {
+  outline: 2px solid blue;
+}
+*/

@@ -1,0 +1,537 @@
+---
+format:
+  html:
+    pagedjs: true
+    self-contained: true
+    css:
+      - styles-base.css
+      - styles-ai.css
+      - codex/style-editor-prototype/generated/style-overrides.css
+    toc: false
+    number-sections: false
+    page-layout: full
+    embed-resources: true
+    margin: 0
+    pagedjs-config:
+      bleed: 0
+      marks: none
+output-file: report_test.html
+---
+
+<!---------- Úvodní slide ---------->
+
+<div class="slide intro-slide">
+<div class="top-badge"> <span class="pill">Quick Scan</span></div>
+
+<div class="main accent">Engagement průzkum</div>
+
+<div class="subtitle-wrap">
+<div class="subtitle">Manažerský výstup</div>
+<!-- Reserved empty space for later blurred logo insert -->
+<div class="reserved-logo-space" aria-hidden="true"></div>
+</div>
+
+<!-- Bottom-left SVG logo (update filename as needed) -->
+
+<img src="ju_logo.svg" alt="juiceUP logo" class="brand-logo">
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+instal_funkce <- function(balicek){
+  if (!requireNamespace(balicek, quietly = T)){
+    install.packages(balicek)
+    library(balicek)
+  }
+  else{
+    library(balicek, character.only = T)
+  }
+}
+
+instal_funkce("here")
+instal_funkce("dplyr")
+instal_funkce("tidyr")
+instal_funkce("readxl")
+instal_funkce("extrafont")
+instal_funkce("showtext")
+instal_funkce("stringr")
+instal_funkce("openxlsx")
+instal_funkce("ggplot2")
+
+font_add("Europa", regular = here("fonts", "EuropaGroNr2JU Regular.otf"),
+         bold = here("fonts", "EuropaGroNr2JU Bold.ttf"))
+showtext_auto()
+
+aktualni_pruzkum <- read_excel(here("data","aktualni_pruzkum.xlsx"))
+#rok2 <- read_excel("Rok2.xlsx")
+
+
+otazky_aktualni <- names(aktualni_pruzkum)
+#otazky_minule <- names(rok1)
+
+```
+
+</div>
+
+
+<!----- Co nás dnes čeká ---------->
+
+<div class="slide agenda-slide">
+<div class="agenda-content">
+<div class="agenda-title">Co nás dnes čeká</div>
+
+<ul class="agenda-list">
+
+<li class="agenda-item">
+<span class="agenda-num">01</span>
+<span class="agenda-text">Průzkum v číslech</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">02</span>
+<span class="agenda-text">Výsledky engagementu</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">03</span>
+<span class="agenda-text">Výsledky jednotlivých driverů</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">04</span>
+<span class="agenda-text">Otázky, které dopadly hůře</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">05</span>
+<span class="agenda-text">Multiple choice otázky</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">06</span>
+<span class="agenda-text">Otevřené otázky</span>
+</li>
+
+<li class="agenda-item">
+<span class="agenda-num">07</span>
+<span class="agenda-text">Závěrečná shrnutí a doporučení</span>
+</li>
+
+</ul>
+
+</div>
+
+<div class="progress-bar"></div>
+
+
+</div>
+
+
+
+
+<!---- Průzkum v číslech sekce ----->
+
+<div class="slide section-slide">
+
+<div class="section-number">01</div>
+
+<div class="section-title">Průzkum v číslech</div>
+
+<div class="section-description">
+Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě.
+Ukážeme Vám např. kolik zaměstnanců se průzkumu zúčastnilo celkově,
+za jednotlivé organizační jednotky nebo podle demografických údajů.
+</div>
+
+  <!-- Progress bar -->
+<div class="progress-bar" style="--progress: 14.825%">
+<div class="progress-bar-fill"></div>
+</div>
+
+</div>
+
+
+
+<!-------- Průzkum v číslech výsledky --------------->
+
+<div class="slide survey-numbers-slide">
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+
+################### základní informace
+
+
+### průměrná délka vyplnění
+
+cas_znacky <- c("Start Date (UTC)", "Submit Date (UTC)")
+
+cas_sloupce <- cas_znacky[cas_znacky %in% otazky_aktualni]
+
+casy <- aktualni_pruzkum[,cas_sloupce]
+
+casy <- casy %>%
+  mutate(
+    `Start Date (UTC)` = as.POSIXlt(`Start Date (UTC)`),
+    `Submit Date (UTC)` = as.POSIXlt(`Submit Date (UTC)`)
+  )
+
+casy$diff <- as.numeric(difftime(casy$`Submit Date (UTC)`,casy$`Start Date (UTC)`))
+
+prum_cas_vyplneni_sec <- mean(casy$diff)
+
+prum_cas_vyplneni_min <- round(prum_cas_vyplneni_sec/60,0)
+
+
+
+
+### pocet respondentu
+
+pocet_resp <- nrow(aktualni_pruzkum)
+
+
+################### návratnost
+
+odd_souhrn_vyplnene <- read_excel(
+  here("data", "navratnost_pruzkumu.xlsx"),
+  sheet = "Návratnost průzkumu"
+)
+
+odd_souhrn_long <- odd_souhrn_vyplnene %>%
+  pivot_longer(cols= 2:3, names_to = "Kategorie", values_to = "Pocet")
+
+
+odd_souhrn_long$oddeleni_trunc <- str_trunc(odd_souhrn_long$oddeleni, width = 25, ellipsis = "...")
+
+
+
+### celková návratnost
+resp_celkem <- sum(odd_souhrn_vyplnene[,2])
+zam_celkem <- sum(odd_souhrn_vyplnene[,3])
+
+navratnost <- round(resp_celkem/zam_celkem*100,0)
+
+
+
+
+```
+
+<div class="survey-title">Průzkum v číslech</div>
+
+<!-- Základní info -->
+<div class="survey-kpis">
+
+<div class="survey-kpi-block">
+
+<div>
+<span class="survey-kpi-number">`r navratnost`</span>
+<span class="survey-kpi-unit">%</span>
+</div>
+<div class="survey-kpi-text">
+je číslo, které odpovídá celkové návratnosti odpovědí od vašich zaměstnanců.
+</div>
+</div>
+
+
+
+<div class="survey-kpi-block">
+<div>
+<span class="survey-kpi-number">`r prum_cas_vyplneni_min`</span>
+<span class="survey-kpi-unit">minut</span>
+</div>
+<div class="survey-kpi-text">
+trvalo průměrně vyplnění dotazníku.
+</div>
+</div>
+
+
+<div class="survey-kpi-block">
+<div>
+<span class="survey-kpi-number">`r pocet_resp`</span>
+<span class="survey-kpi-unit">lidí</span>
+</div>
+<div class="survey-kpi-text">
+ve vaší firmě odpovědělo na průzkum.
+</div>
+</div>
+
+</div>
+
+<!-- Prostřední grafy -->
+
+<div class="survey-main">
+<div>
+<div class="survey-box">
+<div class="survey-box-title">Respondenti podle oddělení</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 4
+#| fig-align: center
+
+ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
+  geom_col(width = .8, position = "dodge")+
+  geom_text(aes(label = Pocet), 
+            position = position_dodge(width = .8),
+            family = "Europa",
+            fontface = "bold", size = 6,
+            vjust = -.3)+
+  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      family = "Europa", face = "plain", size = 20, angle = 30, 
+      vjust = .5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    panel.background = element_blank(),
+    legend.text = element_text(
+      family = "Europa", face = "plain", size = 20
+    )
+  )+
+  scale_fill_manual(values = c("pocet_respondentu" = "#63E8C6","pocet_zamestnancu" = "#D1D1D1"),
+                    labels = c("Počet respondentů", "Počet zaměstnanců"))
+```
+</div>
+</div>
+
+<div>
+<div class="survey-box">
+<div class="survey-box-title">Respondenti podle věku</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 2
+#| fig-align: center
+
+vek_expr <- "let\\?"
+
+vek_index <- str_detect(otazky_aktualni, vek_expr)
+
+vek_ot <- otazky_aktualni[vek_index]
+
+vek <- aktualni_pruzkum[,vek_ot]
+
+names(vek) <- "vek"
+
+vek_souhrn <- vek %>%
+  count(vek) %>%
+  rename(pocet = "n")
+
+ggplot(vek_souhrn, aes(x = vek, y = pocet))+
+  geom_col(fill = "#63E8C6", width = .9, position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface = "bold", 
+            size = 6, vjust = -.3)+
+  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      Family = "Europa", size = 20
+    )
+  )
+
+
+```
+</div>
+</div>
+</div>
+
+  <!-- Grafy pozice a seniorita -->
+<div class="survey-right">
+
+<div class="survey-right-box">
+<div class="survey-box-title">Pracovní pozice</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 4
+
+### pozice
+
+pozice_expr <- "jaké\\s"
+
+pozice_index <- str_detect(otazky_aktualni, pozice_expr)
+
+pozice_ot <- otazky_aktualni[pozice_index]
+
+pozice <- aktualni_pruzkum[,pozice_ot]
+
+names(pozice) <- "pozice"
+
+pozice_souhrn <- pozice %>%
+  group_by(pozice) %>%
+  summarise(pocet = n())
+
+
+ggplot(pozice_souhrn, aes(pozice, pocet))+
+  geom_col(width = .5, fill = "#63E8C6", position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface= "bold", size = 10, hjust = -.3)+
+  coord_flip()+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      family = "Europa", size = 25
+    )
+    
+  )
+
+
+```
+</div>
+
+<div class="survey-right-box">
+<div class="survey-box-title">Délka působení ve firmě</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 5
+
+### doba ve firmě
+
+doba_expr <- "dlouho"
+
+doba_index <- str_detect(otazky_aktualni, doba_expr)
+
+doba_ot <- otazky_aktualni[doba_index]
+
+doba <- aktualni_pruzkum[,doba_ot]
+
+names(doba) <- "doba"
+
+az_expr <- "\\d+(?= až{1})"
+
+do_expr <- "do\\s\\d{1}"
+
+vice_expr <- "více"
+
+doba_souhrn <- doba %>%
+  group_by(doba) %>%
+  summarise(pocet = n()) %>%
+  mutate(az = case_when(
+    str_detect(doba,do_expr) == T ~ 0,
+    str_detect(doba,vice_expr) == T ~ 100,
+    .default = as.integer(str_extract(doba,az_expr))
+  )) %>%
+  arrange(az) %>%
+  mutate(doba = factor(doba, levels = doba))
+
+
+#musí se vymyslet, jak ty odpovědi řadit!!
+# udělat si variables jako do xx, xx a více a leading digit.
+# na základě toho udělat ranking
+
+ggplot(doba_souhrn, aes(doba, pocet))+
+  geom_col(width = .5, fill = "#FFD06B", position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface = "bold", size = 10, hjust = -.3)+
+  coord_flip()+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      family = "Europa", size = 25
+    )
+    
+  )
+
+
+```
+</div>
+
+</div>
+
+
+</div>
+
+
+
+<!-------- Výsledky engagementu oddělovač sekce ------------->
+
+
+<div class="slide section-slide">
+
+<div class="section-number">02</div>
+
+<div class="section-title">Výsledky engagementu</div>
+
+<div class="section-description">
+<p>
+Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk dokáže do své práce ponořit, jak pro svou práci/ firmu/kolegy udělá o krok navíc či jednoduše, jak moc jej práce baví a těší.
+</p>
+
+<p>
+Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdílných metrik – Engagement indexu a Individuální míry engagementu. Výpočet obou metrik Vám dále vysvětlíme a odprezentujeme.
+</p>
+
+</div>
+
+  <!-- Progress bar -->
+<div class="progress-bar" style="--progress: 29%">
+<div class="progress-bar-fill"></div>
+</div>
+
+</div>
+
+
+<!-- Metriky engagementu ---->
+<div class="slide metrics-slide">
+<div class="content-wrapper">
+<div class="header-block">
+<div class="section-title">Metriky engagementu</div>
+<div class="section-description">
+Každá z engagementových metrik má svůj unikátní záměr, a vyžaduje tak vlastní výpočet i interpetaci. Sledováním Engagement indexu i Individuální míry engagementu získáte komplexnější vhled do celé problematiky a možnost odhalit potenciální problémy, které jeden samostatný ukazatel nedokáže odkrýt.​
+</div>
+</div>
+<div class="metrics-grid">
+<div class="metric-column">
+<span class="metric-number">01</span>
+<div class="metric-title">Engagement index</div>
+<div class="metric-description">
+Engagement index je výchozí metrika engagementu v našich výstupech, a má za cíl zmapovat pocity zaměstnanců ohledně jednotlivých aspektů engagementu. Představuje výkon firmy napříč otázkami. Každá odpověď na dílčí otázku může ovlivnit celkovou úroveň engagementu, a proto se také za úplný engagement považuje pouze odpověď Určitě ano. Tato metrika je dále zkoumána napříč odděleními a senioritou zaměstnanců.​
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">02</span>
+<div class="metric-title">Individuální míra engagementu</div>
+<div class="metric-description">
+<p>Individuální míra engagementu se zaměřuje na každého zaměstnance zvlášť. Konkrétně na to, jak si vede napříč všemi aspekty engagementu. U každého respondenta se zprůměrují odpovědi na engagementové otázky, a podle toho se zařadí do jedné ze tří skupin – fully engaged, partially engaged nebo disengaged. Na úrovni firmy je důležité sledovat, jaké jsou proporce jednotlivých skupin zaměstnanců a zda se mění v čase.​</p>
+<p>Aby byla zohledněná individuální variabilita jednotlivých respondentů, za fully engaged považujeme všechny s průměrem 1,2 a méně, za partially engaged všechny s průměrem mezi 1,2 a 2,5 a za disengaged všechny s průměrem ​
+2,5 a méně.​</p>
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">03</span>
+<div class="metric-title">Net promoter score (NPS)</div>
+<div class="metric-description">
+Net promoter score sleduje jednu věc – nakolik je daný zaměstnanec dobrým ambasadorem firmy. Ochota aktivně propagovat svou firmu jako dobré místo pro práci je silně asociovaná i s ostatními aspekty engagementu, a tak skvěle doplňuje obrázek o stavu engagementu ve firmě. Net promoter score dle odpovědi na otázku Doporučil(a) bych tuto firmu jako zaměstnavatele dělí zaměstnance na tři typy – active promoters, neutrals a active detractors.
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+
