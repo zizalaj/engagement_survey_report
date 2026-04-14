@@ -1,0 +1,29 @@
+CURRENT 01:           Quick Scan | Engagement průzkum |      Manažerský výstup | 
+CURRENT 02: Co nás dnes čeká | 01   Průzkum v číslech | 02   Výsledky engagementu | 03   Výsledky jednotlivých driverů | 04   Otázky, které dopadly hůře | 05   Multiple choice otázky | 06   Otevřené otázky | 07   Závěrečná shrnutí a
+CURRENT 03:                                       01 |               Průzkum v číslech | Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě. Ukážeme Vám |  např. kolik zaměstnanců se průzkumu zúčastnilo celkově, za je
+CURRENT 04: Průzkum v číslech |                                    Respondenti podle oddělení   Pracovní pozice | % | je číslo, které odpovídá celkové | návratnosti odpovědí od vašich | zaměstnanců. | 30 minut | trvalo průměrně vypl
+CURRENT 05:                                          02 |         Výsledky engagementu |    Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo |   zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk 
+CURRENT 06: Metriky engagementu | Každá z engagementových metrik má svůj unikátní záměr, a vyžaduje tak vlastní výpočet i interpetaci. Sledováním | Engagement indexu i Individuální míry engagementu získáte komplexnější vhled do celé
+CURRENT 07: Jak cist?                                 Engagement index |                                                                                                                                                                
+CURRENT 08: 
+CURRENT 09: Jak cist?                                  Individualni mira engagementu |                                                                                                                                                  
+CURRENT 10: Vysledky | Engagement index za firmu | v porovnani s benchmarky |                                                                                                                                                Internation
+CURRENT 11: Vysledky | Engagement index za firmu                                                                                                                                      Engagement se meril nasledujicimi otazkami: |     
+CURRENT 12: Vysledky | Individualni mira engagementu za firmu |      Engagement index za firmu |      Uplny engagement                                          Castecny engagement                                     Slaby engagement
+CURRENT 13: Vysledky | Srovnani engagementu indexu napric oddelenimi |  Minuly rok      Aktualni rok           Minuly rok     Aktualni rok          Minuly rok   Aktualni rok   Minuly rok   Aktualni rok   Minuly rok   Aktualni rok | 
+CURRENT 14: Vysledky | Srovnani engagementu indexu napric oddelenimi |      Minuly rok              Aktualni rok                       Minuly rok        Aktualni rok   Minuly rok       Aktualni rok |                  10 %           
+CURRENT 15: Vysledky | Srovnani individualni miry engagementu napric oddelenimi |         Aktualni rok                          Aktualni rok                 Aktualni rok    Aktualni rok    Aktualni rok |            10 %             
+CURRENT 16:                                          03 |           Drivery engagementu | Drivery engagementu popisuji, ktere oblasti maji nejsilnejsi vztah k celkove zkusenosti |               zamestnancu. Pomahaji urcit, na co se 
+CURRENT 17: Jak cist?                     Srovnani driveru s relevantnimi benchmarky |                                                                                                                                                  
+CURRENT 18: Jak cist?                                  Vysledky driveru za firmu |                                                                                                                                                      
+CURRENT 19: Jak cist?                                Detail otazky |                                                                                                                                                                    
+CURRENT 20: Sledovane drivery | V modelu sledujeme oblasti, ktere typicky nejvice souviseji s engagementem. Jejich | kombinace vytvari dobry zaklad pro prioritizaci dalsich kroku. | 01Smysl a vyznam prace | 02Spoluprace a vztahy | 0
+CURRENT 21: Vysledky | Drivery za firmu                                                                                                Top 3                                                   Bottom 3 | Ja a firma                    
+CURRENT 22: Vysledky | Driver 1/5 - Detailne |            Skala odpovedi   Urcite ano = skore 1   Spise ano = skore 2   Nemohu se rozhodnout = skore 3   Spise ne = skore 4   Urcite ne = skore 5 | 
+CURRENT 23: Vysledky | Driver 1/5 - Detailne - urcite ano srovnani dle oddeleni | Skala odpovedi   Mira spokojenosti oddeleni   Mira spokojenosti za firmu | 
+CURRENT 24:                                                 04 |       Problematicke otazky | Pokud se nejaka otazka ukaze jako problematicka, verime, ze je dulezite se na ni podivat hloubeji. Proto v | nasledujici sekci rozebereme 
+CURRENT 25: Vysledky | Rozpad problematicke otazky 1 dle oddeleni |  Skala odpovedi   Skvely vysledek   Prumerny vysledek   Spatny vysledek | 
+CURRENT 26: Vysledky | Rozpad problematicke otazky 1 dle seniority |  Skala odpovedi   Skvely vysledek   Prumerny vysledek   Spatny vysledek | 
+CURRENT 27:                                              05 |     Multiple choice otazky |  Ne vsechny otazky jsou hodnocene na skale od Urcite ano po Urcite ne. V nekterych otazkach rovnez | zkoumame preference respondentu s moznos
+CURRENT 28: Jak cist?            Multiple choice otazky |                                               ? ?? |  1/3 = 33 % |  Tuto moznost preferuje |  33 % respondentu | 
+CURRENT 29: Vysledky | Srovnani odpovedi na multiple choice otazku | 

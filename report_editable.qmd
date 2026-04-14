@@ -110,7 +110,7 @@ multiple_choice_progress_filled <- 5
 
 <div class="slide agenda-slide">
 <div class="agenda-content">
-<div class="agenda-title">Co nás dnes čeká</div>
+<div class="agenda-title">Co nás čeká</div>
 
 <ul class="agenda-list">
 
@@ -1085,14 +1085,10 @@ ggplot(mock_departments_3_long, aes(x = dept, y = pct, fill = response)) +
 <!-- Drivery engagementu oddelovac sekce -->
 <div class="slide section-slide">
 <div class="section-number">03</div>
-<div class="section-title">Drivery engagementu</div>
+<div class="section-title">Výsledky klíčových driverů</div>
 <div class="section-description">
-<p>
-Drivery engagementu popisuji, ktere oblasti maji nejsilnejsi vztah k celkove zkusenosti zamestnancu. Pomahaji urcit, na co se zamerit nejdrive.
-</p>
-<p>
-Nasledujici slidy ukazuji, jak drivery cist a jak vypadaji hlavni vysledky na urovni firmy.
-</p>
+Engagement neexistuje ve vakuu. Výsledky engagementu mohou být značně ovlivněny různými klíčovými tématy, tzv. drivery engagementu.
+Moduly zařazené do průzkumu jsou aktuálními daty podložené významné drivery engagementu.
 </div>
 <div class="scv-progress">
 ```{r}
@@ -1103,6 +1099,89 @@ cat(progress_rectangles(section03_progress_filled, section03_progress_total))
 ```
 </div>
 </div>
+
+
+<!------------ Sledované drivery ----------------->
+
+<div class="slide drivers-list-v3">
+<div class="drv3-title">Měřené/sledované <span class="accent-teal">drivery</span></div>
+<div class="drv3-lead">
+Díky neustálému sledování trendů v oblasti engagementu a analýze našich dat jsme vybrali moduly, které jsou podle nás nejvýznamnějšími drivery engagementu. Pojďme si je teď podrobněji představit
+</div>
+<div class="drv3-grid">
+<div class="drv3-item">
+<div class="drv3-item-title">Já a firma</div>
+<div class="drv3-item-text">Znalost toho, kam firma jde, jakou má za sebou historii a co od ní tím pádem mohu čekat. Bez dobré znalosti toho, jaký je firemní vývoj, se zaměstnanec nemůže s firmou spojit a nemůže být hrdý na to, že je její součástí. Dále se zaměřujeme na znalost firemních cílů, abychom znali povědomí zaměstnanců o budoucím firemním směřování.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Já a tým</div>
+<div class="drv3-item-text">Kvalita spolupráce uvnitř týmu, důvěra mezi kolegy a schopnost společně řešit chyby či překážky. Tento driver ukazuje, nakolik zaměstnanci zažívají bezpečné a podporující pracovní prostředí.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Já a vedoucí</div>
+<div class="drv3-item-text">Srozumitelnost zadání, kvalita zpětné vazby a každodenní podpora od přímého nadřízeného. Sledujeme, zda vedoucí pomáhá vytvářet podmínky pro kvalitní práci i dlouhodobou motivaci.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Rozvoj a růst</div>
+<div class="drv3-item-text">Možnosti učit se nové věci, posouvat se profesně a vidět ve firmě další perspektivu. Právě pocit rozvoje často rozhoduje o tom, zda si zaměstnanec s firmou dokáže spojit i svou budoucnost.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Nástroje a podmínky</div>
+<div class="drv3-item-text">To, zda mají lidé k dispozici funkční procesy, vybavení a podmínky pro dobrou práci. Pokud tato oblast nefunguje, negativně ovlivňuje nejen výkon, ale i celkový pracovní zážitek zaměstnanců.</div>
+</div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+<!----------- Prezentace driverů ------------------->
+
+<div class="slide drivers-present-v3">
+<div class="dpv3-title"><span class="accent-teal">Prezentace</span> driveru</div>
+<div class="dpv3-intro">
+Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souhrnu az po podrobne analyzy.</strong>
+</div>
+<div class="dpv3-top">
+<div class="dpv3-text">
+<span class="accent-teal"><strong>Prvni dve urovne</strong></span> <strong>(Obecny souhrn)</strong> se zameruji na odpovedi agregovane do sirsich kategorii (skvely, prumerny, slaby vysledek). Agregovane odpovedi nejprve porovnavame s externimi benchmarky a pote zmapujeme situaci uvnitr firmy.
+</div>
+<div class="dpv3-text">
+<span class="accent-teal"><strong>Dalsi dve urovne</strong></span> <strong>(Podrobne analyzy)</strong> se zameruji na detailni rozlozeni odpovedi. Na treti urovni uvidite procentualni podil odpovedi na kazdou otazku - od „Urcite ano“ po „Urcite ne“ - na urovni cele firmy. Ctvrta uroven pak ukaze, jak se odpovedi rozdeluji mezi jednotlive organizacni jednotky. S kazdym krokem ziskate hlubsi prehled o deni ve firme.
+</div>
+</div>
+<div class="dpv3-divider">
+<div class="dpv3-left-title">Obecny souhrn</div>
+<div class="dpv3-right-title">Podrobne analyzy</div>
+</div>
+<div class="dpv3-bottom">
+<div class="dpv3-block dpv3-block-left">
+<div class="dpv3-label">Agregace:</div>
+<div class="dpv3-copy"><strong>Skvely vysledek</strong> = Urcite ano a Spise ano,<br><strong>Prumerny vysledek</strong> = Nemohu se rozhodnout,<br><strong>Slaby vysledek</strong> = Urcite ne, Spise ne</div>
+</div>
+<div class="dpv3-block dpv3-block-right">
+<div class="dpv3-label">Agregace:</div>
+<div class="dpv3-copy">Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne</div>
+</div>
+</div>
+<div class="dpv3-steps">
+<div class="dpv3-step"><div class="dpv3-step-num">1.</div><div class="dpv3-step-text">Srovnani s benchmarky</div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">2.</div><div class="dpv3-step-text">Drivery za firmu</div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">3.</div><div class="dpv3-step-text">Detail otazek</div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">4.</div><div class="dpv3-step-text">Drivery v detailu za organizacni jednotku</div></div>
+</div>
+</div>
+
+
+
+
+
+
 
 <div class="slide driver-bench-v2">
 <div class="jakcist-header">
@@ -1168,6 +1247,9 @@ cat(progress_rectangles(section03_progress_filled, section03_progress_total))
 </div>
 </div>
 
+
+<!--------- Jak číst detail otízky ------------>
+
 <div class="slide driver-detail-v2">
 <div class="jakcist-header">
 <div class="jakcist-header-left">
@@ -1225,6 +1307,7 @@ engagementu. Pojdme si je ted podrobneji predstavit
 </div>
 </div>
 
+
 <div class="slide drivers-present-v2">
 <div class="dpv-title"><span class="accent-teal">Prezentace</span> driveru</div>
 <div class="dpv-top">
@@ -1260,24 +1343,6 @@ Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souh
 </div>
 </div>
 
-
-<!-- Sledovane drivery -->
-<div class="slide sledovane-drivery">
-<div class="sd-header">
-<div class="section-title">Sledovane drivery</div>
-<div class="section-description">
-V modelu sledujeme oblasti, ktere typicky nejvice souviseji s engagementem. Jejich kombinace vytvari dobry zaklad pro prioritizaci dalsich kroku.
-</div>
-</div>
-<div class="sd-grid">
-<div class="sd-card"><span>01</span><strong>Smysl a vyznam prace</strong></div>
-<div class="sd-card"><span>02</span><strong>Spoluprace a vztahy</strong></div>
-<div class="sd-card"><span>03</span><strong>Vedeni a komunikace</strong></div>
-<div class="sd-card"><span>04</span><strong>Rozvoj a rust</strong></div>
-<div class="sd-card"><span>05</span><strong>Nastroje a podminky</strong></div>
-<div class="sd-card"><span>06</span><strong>Oceneni a uznani</strong></div>
-</div>
-</div>
 
 
 <!-- Prezentace driveru -->
@@ -1518,11 +1583,11 @@ dept_driver_df <- tibble(
 <div class="slide driver-company-v2">
 <div class="drvco-kicker">Vysledky</div>
 <div class="drvco-head">
+<div class="drvco-head-main">
 <div class="drvco-title">Drivery za firmu</div>
-<div class="drvco-subheads">
-<div>Top 3</div>
-<div>Bottom 3</div>
+<div class="drvco-left-subhead">Top 3</div>
 </div>
+<div class="drvco-right-subhead">Bottom 3</div>
 </div>
 <div class="drvco-grid">
 <div class="drvco-col">
@@ -1922,69 +1987,5 @@ plot_multiple_choice()
 </div>
 </div>
 
-<div class="slide drivers-list-v3">
-<div class="drv3-title">Merene/sledovane <span class="accent-teal">drivery</span></div>
-<div class="drv3-lead">
-Diky neustalemu sledovani trendu v oblasti engagementu a analyze nasich
-dat jsme vybrali moduly, ktere jsou podle nas nejvyznamnejsimi drivery
-engagementu. Pojdme si je ted podrobneji predstavit
-</div>
-<div class="drv3-grid">
-<div class="drv3-item">
-<div class="drv3-item-title">Ja a firma</div>
-<div class="drv3-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div>
-</div>
-<div class="drv3-item">
-<div class="drv3-item-title">Ja a firma</div>
-<div class="drv3-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div>
-</div>
-<div class="drv3-item">
-<div class="drv3-item-title">Ja a firma</div>
-<div class="drv3-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div>
-</div>
-<div class="drv3-item">
-<div class="drv3-item-title">Ja a firma</div>
-<div class="drv3-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div>
-</div>
-<div class="drv3-item">
-<div class="drv3-item-title">Ja a firma</div>
-<div class="drv3-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div>
-</div>
-</div>
-</div>
 
-<div class="slide drivers-present-v3">
-<div class="dpv3-title"><span class="accent-teal">Prezentace</span> driveru</div>
-<div class="dpv3-intro">
-Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souhrnu az po podrobne analyzy.</strong>
-</div>
-<div class="dpv3-top">
-<div class="dpv3-text">
-<span class="accent-teal"><strong>Prvni dve urovne</strong></span> <strong>(Obecny souhrn)</strong> se zameruji na odpovedi agregovane do sirsich kategorii (skvely, prumerny, slaby vysledek). Agregovane odpovedi nejprve porovnavame s externimi benchmarky a pote zmapujeme situaci uvnitr firmy.
-</div>
-<div class="dpv3-text">
-<span class="accent-teal"><strong>Dalsi dve urovne</strong></span> <strong>(Podrobne analyzy)</strong> se zameruji na detailni rozlozeni odpovedi. Na treti urovni uvidite procentualni podil odpovedi na kazdou otazku - od „Urcite ano“ po „Urcite ne“ - na urovni cele firmy. Ctvrta uroven pak ukaze, jak se odpovedi rozdeluji mezi jednotlive organizacni jednotky. S kazdym krokem ziskate hlubsi prehled o deni ve firme.
-</div>
-</div>
-<div class="dpv3-divider">
-<div class="dpv3-left-title">Obecny souhrn</div>
-<div class="dpv3-right-title">Podrobne analyzy</div>
-</div>
-<div class="dpv3-bottom">
-<div class="dpv3-block dpv3-block-left">
-<div class="dpv3-label">Agregace:</div>
-<div class="dpv3-copy"><strong>Skvely vysledek</strong> = Urcite ano a Spise ano,<br><strong>Prumerny vysledek</strong> = Nemohu se rozhodnout,<br><strong>Slaby vysledek</strong> = Urcite ne, Spise ne</div>
-</div>
-<div class="dpv3-block dpv3-block-right">
-<div class="dpv3-label">Agregace:</div>
-<div class="dpv3-copy">Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne</div>
-</div>
-</div>
-<div class="dpv3-steps">
-<div class="dpv3-step"><div class="dpv3-step-num">1.</div><div class="dpv3-step-text">Srovnani s benchmarky</div></div>
-<div class="dpv3-step"><div class="dpv3-step-num">2.</div><div class="dpv3-step-text">Drivery za firmu</div></div>
-<div class="dpv3-step"><div class="dpv3-step-num">3.</div><div class="dpv3-step-text">Detail otazek</div></div>
-<div class="dpv3-step"><div class="dpv3-step-num">4.</div><div class="dpv3-step-text">Drivery v detailu za organizacni jednotku</div></div>
-</div>
-</div>
 
