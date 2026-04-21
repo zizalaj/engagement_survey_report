@@ -1,0 +1,2954 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>report_editable_api</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="report_editable_api_files/libs/clipboard/clipboard.min.js"></script>
+<script src="report_editable_api_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="report_editable_api_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="report_editable_api_files/libs/quarto-html/popper.min.js"></script>
+<script src="report_editable_api_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="report_editable_api_files/libs/quarto-html/anchor.min.js"></script>
+<link href="report_editable_api_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="report_editable_api_files/libs/quarto-html/quarto-syntax-highlighting-d9589ad4e98504035195c70aa99e1e7d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="report_editable_api_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="report_editable_api_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="report_editable_api_files/libs/bootstrap/bootstrap-bb462d781dde1847d9e3ccf7736099dd.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<!---------- Úvodní slide ---------->
+<div class="slide intro-slide">
+<div class="top-badge">
+<span class="pill">Quick Scan</span>
+</div>
+<div class="main accent">
+Engagement průzkum
+</div>
+<div class="subtitle-wrap">
+<div class="subtitle">
+Manažerský výstup
+</div>
+<!-- Reserved empty space for later blurred logo insert -->
+<div class="reserved-logo-space" aria-hidden="true">
+
+</div>
+</div>
+<!-- Bottom-left SVG logo (update filename as needed) -->
+<p><img src="ju_logo.svg" alt="juiceUP logo" class="brand-logo"></p>
+</div>
+<!----- Co nas ceka ---------->
+<!----------- Co nas ceka --------------------------------------->
+<div class="slide agenda-slide">
+<div class="agenda-content">
+<div class="agenda-title">
+Co nas ceka
+</div>
+<ul class="agenda-list">
+<li class="agenda-item">
+<span class="agenda-num">01</span><span class="agenda-text">Průzkum v číslech</span>
+</li>
+<li class="agenda-item">
+<span class="agenda-num">02</span><span class="agenda-text">Výsledky engagementu</span>
+</li>
+<li class="agenda-item">
+<span class="agenda-num">03</span><span class="agenda-text">Výsledky jednotlivých driverů</span>
+</li>
+<li class="agenda-item">
+<span class="agenda-num">04</span><span class="agenda-text">Multiple choice otázky</span>
+</li>
+<li class="agenda-item">
+<span class="agenda-num">05</span><span class="agenda-text">Závěrečná shrnutí a doporučení</span>
+</li>
+</ul>
+<div class="scv-progress">
+<p><span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span></p>
+</div>
+</div>
+</div>
+<!---- Průzkum v číslech sekce ----->
+<div class="slide section-slide">
+<div class="section-number">
+01
+</div>
+<div class="section-title">
+Průzkum v číslech
+</div>
+<div class="section-description">
+<p>Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě. Ukážeme Vám např. kolik zaměstnanců se průzkumu zúčastnilo celkově, za jednotlivé organizační jednotky nebo podle demografických údajů.</p>
+</div>
+<div class="scv-progress">
+<p><span class="on"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span></p>
+</div>
+</div>
+<!-------- Průzkum v číslech výsledky --------------->
+<div class="slide survey-numbers-slide">
+<div class="survey-title">
+Průzkum v číslech
+</div>
+<!-- Základní info -->
+<div class="survey-kpis">
+<div class="survey-kpi-block">
+<div>
+<p><span class="survey-kpi-number">1000</span> <span class="survey-kpi-unit">%</span></p>
+</div>
+<div class="survey-kpi-text">
+<p>je číslo, které odpovídá celkové návratnosti odpovědí od vašich zaměstnanců.</p>
+</div>
+</div>
+<div class="survey-kpi-block">
+<div>
+<p><span class="survey-kpi-number">0</span> <span class="survey-kpi-unit">minut</span></p>
+</div>
+<div class="survey-kpi-text">
+<p>trvalo průměrně vyplnění dotazníku.</p>
+</div>
+</div>
+<div class="survey-kpi-block">
+<div>
+<p><span class="survey-kpi-number">50</span> <span class="survey-kpi-unit">lidí</span></p>
+</div>
+<div class="survey-kpi-text">
+<p>ve vaší firmě odpovědělo na průzkum.</p>
+</div>
+</div>
+</div>
+<!-- Prostřední grafy -->
+<div class="survey-main">
+<div>
+<div class="survey-box">
+<div class="survey-box-title">
+Respondenti podle oddělení
+</div>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="survey-box">
+<div class="survey-box-title">
+Respondenti podle věku
+</div>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Grafy pozice a seniorita -->
+<div class="survey-right">
+<div class="survey-right-box">
+<div class="survey-box-title">
+Pracovní pozice
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="survey-right-box">
+<div class="survey-box-title">
+Délka působení ve firmě
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-------- Výsledky engagementu oddělovač sekce ------------->
+<div class="slide section-slide">
+<div class="section-number">
+02
+</div>
+<div class="section-title">
+Výsledky engagementu
+</div>
+<div class="section-description">
+<p>
+Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk dokáže do své práce ponořit, jak pro svou práci/ firmu/kolegy udělá o krok navíc či jednoduše, jak moc jej práce baví a těší.
+</p>
+<p>
+Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdílných metrik – Engagement indexu a Individuální míry engagementu. Výpočet obou metrik Vám dále vysvětlíme a odprezentujeme.
+</p>
+</div>
+<div class="scv-progress">
+<p><span class="on"></span> <span class="on"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span></p>
+</div>
+</div>
+<!-- Metriky engagementu ---->
+<div class="slide metrics-slide">
+<div class="content-wrapper">
+<div class="header-block">
+<div class="section-title">
+Metriky engagementu
+</div>
+<div class="section-description">
+<p>Každá z engagementových metrik má svůj unikátní záměr, a vyžaduje tak vlastní výpočet i interpetaci. Sledováním Engagement indexu i Individuální míry engagementu získáte komplexnější vhled do celé problematiky a možnost odhalit potenciální problémy, které jeden samostatný ukazatel nedokáže odkrýt.​</p>
+</div>
+</div>
+<div class="metrics-grid">
+<div class="metric-column">
+<span class="metric-number">01</span>
+<div class="metric-title">
+Engagement index
+</div>
+<div class="metric-description">
+<p>Engagement index je výchozí metrika engagementu v našich výstupech, a má za cíl zmapovat pocity zaměstnanců ohledně jednotlivých aspektů engagementu. Představuje výkon firmy napříč otázkami. Každá odpověď na dílčí otázku může ovlivnit celkovou úroveň engagementu, a proto se také za úplný engagement považuje pouze odpověď Určitě ano. Tato metrika je dále zkoumána napříč odděleními a senioritou zaměstnanců.​</p>
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">02</span>
+<div class="metric-title">
+Individuální míra engagementu
+</div>
+<div class="metric-description">
+<p>
+Individuální míra engagementu se zaměřuje na každého zaměstnance zvlášť. Konkrétně na to, jak si vede napříč všemi aspekty engagementu. U každého respondenta se zprůměrují odpovědi na engagementové otázky, a podle toho se zařadí do jedné ze tří skupin – fully engaged, partially engaged nebo disengaged. Na úrovni firmy je důležité sledovat, jaké jsou proporce jednotlivých skupin zaměstnanců a zda se mění v čase.​
+</p>
+<p>
+Aby byla zohledněná individuální variabilita jednotlivých respondentů, za fully engaged považujeme všechny s průměrem 1,2 a méně, za partially engaged všechny s průměrem mezi 1,2 a 2,5 a za disengaged všechny s průměrem ​ 2,5 a méně.​
+</p>
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">03</span>
+<div class="metric-title">
+Net promoter score (NPS)
+</div>
+<div class="metric-description">
+<p>Net promoter score sleduje jednu věc – nakolik je daný zaměstnanec dobrým ambasadorem firmy. Ochota aktivně propagovat svou firmu jako dobré místo pro práci je silně asociovaná i s ostatními aspekty engagementu, a tak skvěle doplňuje obrázek o stavu engagementu ve firmě. Net promoter score dle odpovědi na otázku Doporučil(a) bych tuto firmu jako zaměstnavatele dělí zaměstnance na tři typy – active promoters, neutrals a active detractors.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Jak cist? Engagement index -->
+<div class="slide jakcist-slide jakcist--engindex">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">
+Jak cist?
+</div>
+<div class="jakcist-header-sub">
+Engagement index
+</div>
+</div>
+<div class="jakcist-q q1">
+?
+</div>
+<div class="jakcist-q q2">
+?
+</div>
+<div class="jakcist-q q3">
+?
+</div>
+</div>
+<div class="jakcist-content">
+<p class="jakcist-lead">
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="jakcist-main">
+<div class="jakcist-card">
+<div class="jakcist-card-title">
+Engagement index za firmu
+</div>
+<div class="jakcist-kpis">
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">
+Uplny engagement
+</div>
+<div class="jakcist-kpi-value accent-teal">
+42 %
+</div>
+<p class="jakcist-kpi-desc">
+Uplny engagement za firmu = 42 %. Toto cislo vyznacuje, kolik % odpovedi na vsechny engagementove otazky bylo urcite ano.
+</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">
+Castecny engagement
+</div>
+<div class="jakcist-kpi-value accent-grey">
+33 %
+</div>
+<p class="jakcist-kpi-desc">
+Uplny engagement za firmu = 42 %. Toto cislo vyznacuje, kolik % odpovedi na vsechny engagementove otazky bylo urcite ano.
+</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">
+Slaby engagement
+</div>
+<div class="jakcist-kpi-value accent-pink">
+25 %
+</div>
+<p class="jakcist-kpi-desc">
+Uplny engagement za firmu = 42 %. Toto cislo vyznacuje, kolik % odpovedi na vsechny engagementove otazky bylo urcite ano.
+</p>
+</div>
+</div>
+</div>
+<div class="jakcist-right">
+<div class="jakcist-right-title">
+Engagement index pro otazku
+</div>
+<div class="jakcist-bar">
+<div class="jakcist-bar-seg teal" style="width:26%">
+<span>10 %</span>
+</div>
+<div class="jakcist-bar-seg grey" style="width:58%">
+<span>100 %</span>
+</div>
+<div class="jakcist-bar-seg pink" style="width:16%">
+<span>15 %</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">
+Skala odpovedi
+</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch tealLight"></i>Spise ano = skore 2
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+</main></div>
+
+<!-- Jak cist? Individualni mira engagementu -->
+<div class="slide jakcist-slide jakcist--individual">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">
+Jak cist?
+</div>
+<div class="jakcist-header-sub">
+Individualni mira engagementu
+</div>
+</div>
+<div class="jakcist-q q1">
+?
+</div>
+<div class="jakcist-q q2">
+?
+</div>
+<div class="jakcist-q q3">
+?
+</div>
+</div>
+<div class="jakcist-content">
+<p class="jakcist-lead">
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="jakcist-main">
+<div class="jakcist-card">
+<div class="jakcist-card-title">
+Individualni mira engagementu
+</div>
+<div class="jakcist-kpis">
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">
+Uplny engagement
+</div>
+<div class="jakcist-kpi-value accent-teal">
+42 %
+</div>
+<p class="jakcist-kpi-desc">
+30 % engaged zamestnancu = kolik % zamestnancu spada do kategorie engaged. Engaged zamestnanec je kazdy, kdo ma prumerne skore engagementovych otazek 1,5 a mene.
+</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">
+Castecny engagement
+</div>
+<div class="jakcist-kpi-value accent-grey">
+33 %
+</div>
+<p class="jakcist-kpi-desc">
+30 % engaged zamestnancu = kolik % zamestnancu spada do kategorie engaged. Engaged zamestnanec je kazdy, kdo ma prumerne skore engagementovych otazek 1,5 a mene.
+</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">
+Slaby engagement
+</div>
+<div class="jakcist-kpi-value accent-pink">
+25 %
+</div>
+<p class="jakcist-kpi-desc">
+30 % engaged zamestnancu = kolik % zamestnancu spada do kategorie engaged. Engaged zamestnanec je kazdy, kdo ma prumerne skore engagementovych otazek 1,5 a mene.
+</p>
+</div>
+</div>
+</div>
+<div class="jakcist-right">
+<div class="jakcist-right-title">
+Priklad:
+</div>
+<p class="jakcist-example">
+Respondent odpovedel na engagementove otazky:<br><em>Urcite ano, Urcite ano, Spise ano, Spise ano.</em>
+</p>
+<p class="jakcist-example">
+Jeho/jeji prumer = (1+1+2+2)/4 = <strong>1,5</strong><br>Respondent patri mezi engaged zamestnance.
+</p>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">
+Skala odpovedi
+</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch tealLight"></i>Spise ano = skore 2
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+
+<!-- Engagement index benchmark -->
+<div class="slide engindex-slide">
+<div class="ei-header">
+<p class="ei-kicker">
+Vysledky
+</p>
+<h1 class="ei-title">
+Engagement index <span class="accent-teal">za firmu</span>
+</h1>
+<p class="ei-subtitle">
+v porovnani s benchmarky
+</p>
+</div>
+<div class="ei-main">
+<div class="ei-card">
+<div class="ei-card-title">
+Engagement index za firmu
+</div>
+<div class="ei-kpis">
+<div class="ei-kpi">
+<p class="ei-kpi-head">
+Uplny engagement
+</p>
+<p class="ei-kpi-value accent-teal">
+42 %
+</p>
+<p class="ei-kpi-desc">
+Uplny engagement reflektuje velmi dobrou atmosferu uvnitr firmy a kladny vztah zamestnancu k praci i firme. Za dobrou naladou muze stat skupina velmi spokojenych zamestnancu, nebo plosna spokojenost s nekterymi aspekty prace a firemni kultury.
+</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">
+Castecny engagement
+</p>
+<p class="ei-kpi-value accent-grey">
+33 %
+</p>
+<p class="ei-kpi-desc">
+Castecny engagement ukazuje na dilci nedostatky, v nichz spociva potencial firmy pro zlepseni. Klicove je pochopit, zda za vysledky stoji skupina zamestnancu nebo vysledky nekterych z konkretnich engagementovych otazek. Kompletni obrazek se ziska srovnanim s individualni mirou engagementu.
+</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">
+Slaby engagement
+</p>
+<p class="ei-kpi-value accent-pink">
+25 %
+</p>
+<p class="ei-kpi-desc">
+Slaby engagement indikuje spatnou atmosferu, ktera muze vest az k odchodu nekterych zamestnancu. Opet je dulezite urcit, zda slaby vysledek ukazuje na skupinu zamestnancu nebo na plosnou nespokojenost s nekterymi aspekty prace. Ke spravnemu vyhodnoceni je dobre porovnat tento vysledek s individualni mirou engagementu.
+</p>
+</div>
+</div>
+</div>
+<div class="ei-bench">
+<div class="ei-bench-title">
+International benchmark
+</div>
+<div class="ei-bench-item">
+<div class="ei-bench-value">
+15 %
+</div>
+<div class="ei-bench-label">
+CZECH REPUBLIC
+</div>
+</div>
+<div class="ei-bench-item">
+<div class="ei-bench-value">
+32 %
+</div>
+<div class="ei-bench-label">
+U.S.
+</div>
+</div>
+<div class="ei-bench-item">
+<div class="ei-bench-value">
+37 %
+</div>
+<div class="ei-bench-label">
+WHM
+</div>
+</div>
+</div>
+</div>
+<div class="ei-legend">
+<div class="ei-legend-label">
+Skala odpovedi
+</div>
+<div class="ei-legend-items">
+<div class="ei-legend-item">
+<i class="ei-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="ei-legend-item">
+<i class="ei-swatch grey1"></i>Spise ano = skore 2
+</div>
+<div class="ei-legend-item">
+<i class="ei-swatch grey2"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="ei-legend-item">
+<i class="ei-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="ei-legend-item">
+<i class="ei-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+<!-- Engagement index across all questions -->
+<div class="slide engindex-firma-ref">
+<div class="ef-top">
+<div>
+<p class="ef-kicker">
+Vysledky
+</p>
+<h1 class="ef-title">
+Engagement index <span class="accent-teal">za firmu</span>
+</h1>
+</div>
+<div class="ef-right-head">
+Engagement se meril nasledujicimi otazkami:
+</div>
+</div>
+<div class="ef-main">
+<div class="ef-left">
+<div class="ef-text-block">
+<p>
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="ef-brace">
+
+</div>
+</div>
+<div class="ef-text-block">
+<p>
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="ef-brace">
+
+</div>
+</div>
+</div>
+<div class="ef-right">
+<div class="ef-question-list">
+<div class="ef-question-group">
+<div class="ef-question-title">
+Jsem hrdy
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Minuly rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-soft">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal-soft">
+15 %
+</div>
+</div>
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Aktualni rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-strong">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal">
+15 %
+</div>
+</div>
+</div>
+</div>
+<div class="ef-question-group">
+<div class="ef-question-title">
+Jsem hrdy
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Minuly rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-soft">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal-soft">
+15 %
+</div>
+</div>
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Aktualni rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-strong">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal">
+15 %
+</div>
+</div>
+</div>
+</div>
+<div class="ef-question-group">
+<div class="ef-question-title">
+Bavi me to
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Minuly rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-soft">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal-soft">
+15 %
+</div>
+</div>
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Aktualni rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-strong">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal">
+15 %
+</div>
+</div>
+</div>
+</div>
+<div class="ef-question-group">
+<div class="ef-question-title">
+Smysl
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Minuly rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-soft">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal-soft">
+15 %
+</div>
+</div>
+</div>
+<div class="ef-row">
+<div class="ef-row-label">
+Aktualni rok
+</div>
+<div class="ef-bar">
+<div class="ef-bar-seg pink-strong">
+10 %
+</div>
+<div class="ef-bar-seg grey">
+100 %
+</div>
+<div class="ef-bar-seg teal">
+15 %
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="ef-legend">
+<div class="ef-legend-label">
+Skala odpovedi
+</div>
+<div class="ef-legend-items">
+<div class="ef-legend-item">
+<i class="ef-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="ef-legend-item">
+<i class="ef-swatch grey1"></i>Spise ano = skore 2
+</div>
+<div class="ef-legend-item">
+<i class="ef-swatch grey2"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="ef-legend-item">
+<i class="ef-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="ef-legend-item">
+<i class="ef-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+<!-- Individualni mira engagementu -->
+<div class="slide engindex-slide indeng-slide">
+<div class="ei-header">
+<p class="ei-kicker">
+Vysledky
+</p>
+<h1 class="ei-title">
+Individualni mira engagementu <span class="accent-teal">za firmu</span>
+</h1>
+</div>
+<div class="ei-main indeng-main">
+<div class="ei-card">
+<div class="ei-card-title">
+Engagement index za firmu
+</div>
+<div class="ei-kpis">
+<div class="ei-kpi">
+<p class="ei-kpi-head">
+Uplny engagement
+</p>
+<p class="ei-kpi-value accent-teal">
+42 %
+</p>
+<p class="ei-kpi-desc">
+Do kategorie fully engaged spadaji lide, kteri pracuji naplno, svoji praci maji radi a zaroven maji radi sveho zamestnavatele.
+</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">
+Castecny engagement
+</p>
+<p class="ei-kpi-value accent-grey">
+33 %
+</p>
+<p class="ei-kpi-desc">
+V kategorii castecny engagement jsou lide, kteri maji radi svoji firmu, ale obcas jim neco nevyhovuje. Z toho duvodu je take jejich vykon promenlivy a ne tak stabilni. Zaroven tato kategorie predstavuje nejvetsi potencial pro rust a firma s ni muze dobre do budoucna pracovat.
+</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">
+Slaby engagement
+</p>
+<p class="ei-kpi-value accent-pink">
+25 %
+</p>
+<p class="ei-kpi-desc">
+Zde jsou lide, kteri k firme a tomu, co v ni delaji, maji maly nebo zadny vztah. Mohou zvazovat odchod nebo zmenu zamestnani. Jejich pracovni nasazeni je male a mohou ve svem okoli sirit negativni naladu.
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Engagement index oddeleni 1 -->
+<div class="slide engindex-oddeleni-slide">
+<div class="eio-header">
+<div class="section-title">
+Engagement index podle oddeleni
+</div>
+<div class="section-description">
+<p>Detailni pohled pomaha odhalit tymy, ktere jsou vyrazne nadprumerne nebo naopak potrebují podporu.</p>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="1008"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<!-- Engagement index oddeleni 2 -->
+<div class="slide engindex-oddeleni-slide">
+<div class="eio-header">
+<div class="section-title">
+Engagement index podle oddeleni
+</div>
+<div class="section-description">
+<p>Srovnani napric oddelenimi ukazuje, kde se nejvice propisuje kvalita vedeni, smyslu prace nebo spoluprace.</p>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="1008"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<!-- Engagement index oddeleni 3 -->
+<div class="slide engindex-oddeleni-slide">
+<div class="eio-header">
+<div class="section-title">
+Engagement index podle oddeleni
+</div>
+<div class="section-description">
+<p>Na teto urovni uz lze dobre cist, ktere tymy stoji za hlubsi interpretaci v kontextu organizacnich zmen nebo managerske praxe.</p>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="1008"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<!-- Department comparison v2 -->
+<div class="slide eio-v2">
+<div class="eio-header">
+<p class="eio-kicker">
+Vysledky
+</p>
+<h1 class="eio-title">
+Srovnani <span class="accent-teal">engagementu indexu</span> napric oddelenimi
+</h1>
+</div>
+<div class="eio-columns five">
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 01
+</div>
+</div>
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 02
+</div>
+</div>
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 03
+</div>
+</div>
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 04
+</div>
+</div>
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 05
+</div>
+</div>
+</div>
+<div class="eio-next">
+&gt;&gt;
+</div>
+<div class="eio-legend">
+<div class="eio-legend-label">
+Skala odpovedi
+</div>
+<div class="eio-legend-items">
+<div class="eio-legend-item">
+<i class="eio-swatch teal"></i>Fully engaged
+</div>
+<div class="eio-legend-item">
+<i class="eio-swatch grey"></i>Partially engaged
+</div>
+<div class="eio-legend-item">
+<i class="eio-swatch pink"></i>Disengaged
+</div>
+</div>
+</div>
+</div>
+<div class="slide eio-v2">
+<div class="eio-header">
+<p class="eio-kicker">
+Vysledky
+</p>
+<h1 class="eio-title">
+Srovnani <span class="accent-teal">engagementu indexu</span> napric oddelenimi
+</h1>
+</div>
+<div class="eio-columns three">
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 06
+</div>
+</div>
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 07
+</div>
+</div>
+<div class="eio-col">
+<div class="eio-col-head">
+<span>Minuly rok</span><span>Aktualni rok</span>
+</div>
+<div class="eio-pair">
+<div class="eio-bar old">
+<div class="seg pink-soft">
+10 %
+</div>
+<div class="seg grey">
+100 %
+</div>
+<div class="seg teal-soft">
+15 %
+</div>
+</div>
+<div class="eio-bar current">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 08
+</div>
+</div>
+</div>
+<div class="eio-legend">
+<div class="eio-legend-label">
+Skala odpovedi
+</div>
+<div class="eio-legend-items">
+<div class="eio-legend-item">
+<i class="eio-swatch teal"></i>Fully engaged
+</div>
+<div class="eio-legend-item">
+<i class="eio-swatch grey"></i>Partially engaged
+</div>
+<div class="eio-legend-item">
+<i class="eio-swatch pink"></i>Disengaged
+</div>
+</div>
+</div>
+</div>
+<div class="slide eio-v2">
+<div class="eio-header">
+<p class="eio-kicker">
+Vysledky
+</p>
+<h1 class="eio-title">
+Srovnani <span class="accent-teal">individualni miry engagementu</span> napric oddelenimi
+</h1>
+</div>
+<div class="eio-columns five singleyear">
+<div class="eio-col solo">
+<div class="eio-col-head center">
+<span>Aktualni rok</span>
+</div>
+<div class="eio-single">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 01
+</div>
+</div>
+<div class="eio-col solo">
+<div class="eio-col-head center">
+<span>Aktualni rok</span>
+</div>
+<div class="eio-single">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 02
+</div>
+</div>
+<div class="eio-col solo">
+<div class="eio-col-head center">
+<span>Aktualni rok</span>
+</div>
+<div class="eio-single">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 03
+</div>
+</div>
+<div class="eio-col solo">
+<div class="eio-col-head center">
+<span>Aktualni rok</span>
+</div>
+<div class="eio-single">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 04
+</div>
+</div>
+<div class="eio-col solo">
+<div class="eio-col-head center">
+<span>Aktualni rok</span>
+</div>
+<div class="eio-single">
+<div class="seg pink-strong">
+10 %
+</div>
+<div class="seg grey-dark">
+100 %
+</div>
+<div class="seg teal">
+15 %
+</div>
+</div>
+<div class="eio-label">
+Oddeleni 05
+</div>
+</div>
+</div>
+<div class="eio-legend">
+<div class="eio-legend-label">
+Skala odpovedi
+</div>
+<div class="eio-legend-items">
+<div class="eio-legend-item">
+<i class="eio-swatch teal"></i>Fully engaged
+</div>
+<div class="eio-legend-item">
+<i class="eio-swatch grey"></i>Partially engaged
+</div>
+<div class="eio-legend-item">
+<i class="eio-swatch pink"></i>Disengaged
+</div>
+</div>
+</div>
+</div>
+<!-- Drivery engagementu oddelovac sekce -->
+<div class="slide section-slide">
+<div class="section-number">
+03
+</div>
+<div class="section-title">
+Vysledky klicovych driveru
+</div>
+<div class="section-description">
+<p>Engagement neexistuje ve vakuu. Vysledky engagementu mohou byt znacne ovlivneny ruznymi klicovymi tematy, tzv. drivery engagementu. Moduly zarazene do pruzkumu jsou aktualnimi daty podlozene vyznamne drivery engagementu.</p>
+</div>
+<div class="scv-progress">
+<p><span class="on"></span> <span class="on"></span> <span class="on"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span></p>
+</div>
+</div>
+<!------------ Sledovane drivery ----------------->
+<div class="slide drivers-list-v3">
+<div class="drv3-title">
+Merene/sledovane <span class="accent-teal">drivery</span>
+</div>
+<div class="drv3-lead">
+<p>Diky neustalemu sledovani trendu v oblasti engagementu a analyze nasich dat jsme vybrali moduly, ktere jsou podle nas nejvyznamnejsimi drivery engagementu. Pojdme si je ted podrobneji predstavit</p>
+</div>
+<div class="drv3-grid">
+<div class="drv3-item">
+<div class="drv3-item-title">
+Ja a firma
+</div>
+<div class="drv3-item-text">
+Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.
+</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">
+Ja a tym
+</div>
+<div class="drv3-item-text">
+Kvalita spoluprace uvnitr tymu, duvera mezi kolegy a schopnost spolecne resit chyby ci prekazky. Tento driver ukazuje, nakolik zamestnanci zazivaji bezpecne a podporujici pracovni prostredi.
+</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">
+Ja a vedouci
+</div>
+<div class="drv3-item-text">
+Srozumitelnost zadani, kvalita zpetne vazby a kazdodenni podpora od primeho nadrizeneho. Sledujeme, zda vedouci pomaha vytvaret podminky pro kvalitni praci i dlouhodobou motivaci.
+</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">
+Rozvoj a rust
+</div>
+<div class="drv3-item-text">
+Moznosti ucit se nove veci, posouvat se profesne a videt ve firme dalsi perspektivu. Prave pocit rozvoje casto rozhoduje o tom, zda si zamestnanec s firmou dokaze spojit i svou budoucnost.
+</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">
+Nastroje a podminky
+</div>
+<div class="drv3-item-text">
+To, zda maji lide k dispozici funkcni procesy, vybaveni a podminky pro dobrou praci. Pokud tato oblast nefunguje, negativne ovlivnuje nejen vykon, ale i celkovy pracovni zazitek zamestnancu.
+</div>
+</div>
+</div>
+</div>
+<!----------- Prezentace driveru ------------------->
+<div class="slide drivers-present-v3">
+<div class="dpv3-title">
+<span class="accent-teal">Prezentace</span> driveru
+</div>
+<div class="dpv3-intro">
+<p>Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souhrnu az po podrobne analyzy.</strong></p>
+</div>
+<div class="dpv3-top">
+<div class="dpv3-text">
+<p><span class="accent-teal"><strong>Prvni dve urovne</strong></span> <strong>(Obecny souhrn)</strong> se zameruji na odpovedi agregovane do sirsich kategorii (skvely, prumerny, slaby vysledek). Agregovane odpovedi nejprve porovnavame s externimi benchmarky a pote zmapujeme situaci uvnitr firmy.</p>
+</div>
+<div class="dpv3-text">
+<p><span class="accent-teal"><strong>Dalsi dve urovne</strong></span> <strong>(Podrobne analyzy)</strong> se zameruji na detailni rozlozeni odpovedi. Na treti urovni uvidite procentualni podil odpovedi na kazdou otazku - od “Urcite ano” po “Urcite ne” - na urovni cele firmy. Ctvrta uroven pak ukaze, jak se odpovedi rozdeluji mezi jednotlive organizacni jednotky. S kazdym krokem ziskate hlubsi prehled o deni ve firme.</p>
+</div>
+</div>
+<div class="dpv3-divider">
+<div class="dpv3-left-title">
+Obecny souhrn
+</div>
+<div class="dpv3-right-title">
+Podrobne analyzy
+</div>
+</div>
+<div class="dpv3-bottom">
+<div class="dpv3-block dpv3-block-left">
+<div class="dpv3-label">
+Agregace:
+</div>
+<div class="dpv3-copy">
+<strong>Skvely vysledek</strong> = Urcite ano a Spise ano,<br><strong>Prumerny vysledek</strong> = Nemohu se rozhodnout,<br><strong>Slaby vysledek</strong> = Urcite ne, Spise ne
+</div>
+</div>
+<div class="dpv3-block dpv3-block-right">
+<div class="dpv3-label">
+Agregace:
+</div>
+<div class="dpv3-copy">
+Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne
+</div>
+</div>
+</div>
+<div class="dpv3-steps">
+<div class="dpv3-step">
+<div class="dpv3-step-num">
+1.
+</div>
+<div class="dpv3-step-text">
+Srovnani s benchmarky
+</div>
+</div>
+<div class="dpv3-step">
+<div class="dpv3-step-num">
+2.
+</div>
+<div class="dpv3-step-text">
+Drivery za firmu
+</div>
+</div>
+<div class="dpv3-step">
+<div class="dpv3-step-num">
+3.
+</div>
+<div class="dpv3-step-text">
+Detail otazek
+</div>
+</div>
+<div class="dpv3-step">
+<div class="dpv3-step-num">
+4.
+</div>
+<div class="dpv3-step-text">
+Drivery v detailu za organizacni jednotku
+</div>
+</div>
+</div>
+</div>
+<div class="slide driver-bench-v2">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">
+Jak cist?
+</div>
+<div class="jakcist-header-sub">
+Srovnani driveru s relevantnimi benchmarky
+</div>
+</div>
+<div class="jakcist-q q1">
+?
+</div>
+<div class="jakcist-q q2">
+?
+</div>
+<div class="jakcist-q q3">
+?
+</div>
+</div>
+<div class="driver-bench-body">
+<p class="driver-bench-lead">
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="driver-bench-table">
+<div class="db-row head">
+<div>
+
+</div>
+<div class="angled">
+Current - JuiceUP
+</div>
+<div class="angled">
+Czech Republic
+</div>
+<div class="angled">
+UK
+</div>
+</div>
+<div class="db-row">
+<div class="db-label">
+Engagement
+</div>
+<div class="db-cell accent">
+81 %
+</div>
+<div class="db-cell">
+78 %
+</div>
+<div class="db-cell">
+88 %
+</div>
+</div>
+<div class="db-row">
+<div class="db-label">
+Leadership
+</div>
+<div class="db-cell accent">
+78 %
+</div>
+<div class="db-cell">
+98 %
+</div>
+<div class="db-cell">
+78 %
+</div>
+</div>
+<div class="db-row">
+<div class="db-label">
+Values
+</div>
+<div class="db-cell accent">
+87 %
+</div>
+<div class="db-cell">
+63 %
+</div>
+<div class="db-cell">
+78 %
+</div>
+</div>
+<div class="db-row">
+<div class="db-label">
+Share
+</div>
+<div class="db-cell accent">
+67 %
+</div>
+<div class="db-cell">
+88 %
+</div>
+<div class="db-cell">
+76 %
+</div>
+</div>
+<div class="db-row respondents">
+<div class="db-label">
+Respondentu
+</div>
+<div class="db-cell accent">
+1000
+</div>
+<div class="db-cell">
+203
+</div>
+<div class="db-cell">
+30
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="slide driver-firma-v2">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">
+Jak cist?
+</div>
+<div class="jakcist-header-sub">
+Vysledky driveru za firmu
+</div>
+</div>
+<div class="jakcist-q q1">
+?
+</div>
+<div class="jakcist-q q2">
+?
+</div>
+<div class="jakcist-q q3">
+?
+</div>
+</div>
+<div class="driver-firma-body">
+<p class="driver-firma-lead">
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="driver-firma-bars">
+<div class="df-bar-block teal">
+<div class="df-bar">
+15 %
+</div>
+<div class="df-bar-copy">
+Podil odpovedi <strong>Urcite ano</strong><br>a <strong>Spise ano</strong> na vsech odpovedich driveru
+</div>
+</div>
+<div class="df-bar-block grey">
+<div class="df-bar">
+100 %
+</div>
+<div class="df-bar-copy">
+Podil odpovedi <strong>Nemohu se rozhodnout</strong> na vsech odpovedich driveru
+</div>
+</div>
+<div class="df-bar-block pink">
+<div class="df-bar">
+10 %
+</div>
+<div class="df-bar-copy">
+Podil odpovedi <strong>Urcite ne</strong><br>a <strong>Spise ne</strong> na vsech odpovedich driveru
+</div>
+</div>
+</div>
+<div class="driver-firma-bottom">
+<div class="df-left-note">
+Podil odpovedi <strong>Urcite ano a Spise ano</strong><br>na vsech za danou otazku
+</div>
+<div class="df-arrow">
+
+</div>
+<div class="df-right-list">
+<div class="df-item">
+<span>88 %</span> Muj vedouci zadava ukoly jasne a presne.
+</div>
+<div class="df-item">
+<span>88 %</span> Mam dobry vztah se svym vedoucim.
+</div>
+<div class="df-item">
+<span>88 %</span> V pracovnich otazkach me vedouci vzdy vyslysi a da prostor k vyjadreni.
+</div>
+<div class="df-item">
+<span>88 %</span> Dostavam pravidelnou zpetnou vazbu od meho vedouciho.
+</div>
+<div class="df-item">
+<span>88 %</span> Muj vedouci me dostatecne motivuje v me praci.
+</div>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">
+Skala odpovedi
+</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch tealLight"></i>Spise ano = skore 2
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+<div class="slide driver-detail-v2">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">
+Jak cist?
+</div>
+<div class="jakcist-header-sub">
+Detail otazky
+</div>
+</div>
+<div class="jakcist-q q1">
+?
+</div>
+<div class="jakcist-q q2">
+?
+</div>
+<div class="jakcist-q q3">
+?
+</div>
+</div>
+<div class="driver-detail-body">
+<p class="driver-detail-lead">
+Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem ipsum dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit amet podnadpis
+</p>
+<div class="dd-row">
+<div class="dd-label">
+Otazka 01
+</div>
+<div class="dd-bar">
+<div class="seg teal">
+88 %
+</div>
+<div class="seg tealLight">
+88 %
+</div>
+<div class="seg grey">
+88 %
+</div>
+<div class="seg pinkLight">
+88 %
+</div>
+<div class="seg pinkStrong">
+88 %
+</div>
+</div>
+</div>
+<div class="dd-row">
+<div class="dd-label">
+Otazka 02
+</div>
+<div class="dd-bar">
+<div class="seg teal">
+88 %
+</div>
+<div class="seg tealLight">
+88 %
+</div>
+<div class="seg grey">
+88 %
+</div>
+<div class="seg pinkLight">
+88 %
+</div>
+<div class="seg pinkStrong">
+88 %
+</div>
+</div>
+</div>
+<div class="dd-notes">
+<div class="dd-note">
+Podil odpovedi <strong>Urcite ano</strong> na danou otazku
+</div>
+<div class="dd-note">
+Podil odpovedi <strong>Spise ano</strong> na danou otazku
+</div>
+<div class="dd-note">
+Podil odpovedi <strong>Nemohu se rozhodnout</strong> na danou otazku
+</div>
+<div class="dd-note">
+Podil odpovedi <strong>Spise ne</strong> na danou otazku
+</div>
+<div class="dd-note">
+Podil odpovedi <strong>Urcite ne</strong> na danou otazku
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">
+Skala odpovedi
+</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch tealLight"></i>Spise ano = skore 2
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+<!-- Driver intro v2 -->
+<div class="slide drivers-list-v2">
+<div class="drv-title">
+Merene/sledovane <span class="accent-teal">drivery</span>
+</div>
+<div class="drv-lead">
+<p>Diky neustalemu sledovani trendu v oblasti engagementu a analyze nasich dat jsme vybrali moduly, ktere jsou podle nas nejvyznamnejsimi drivery engagementu. Pojdme si je ted podrobneji predstavit</p>
+</div>
+<div class="drv-grid">
+<div class="drv-item">
+<div class="drv-item-title">
+Ja a firma
+</div>
+<div class="drv-item-text">
+Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.
+</div>
+</div>
+<div class="drv-item">
+<div class="drv-item-title">
+Ja a firma
+</div>
+<div class="drv-item-text">
+Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.
+</div>
+</div>
+<div class="drv-item">
+<div class="drv-item-title">
+Ja a firma
+</div>
+<div class="drv-item-text">
+Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.
+</div>
+</div>
+<div class="drv-item">
+<div class="drv-item-title">
+Ja a firma
+</div>
+<div class="drv-item-text">
+Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.
+</div>
+</div>
+<div class="drv-item">
+<div class="drv-item-title">
+Ja a firma
+</div>
+<div class="drv-item-text">
+Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.
+</div>
+</div>
+</div>
+</div>
+<div class="slide drivers-present-v2">
+<div class="dpv-title">
+<span class="accent-teal">Prezentace</span> driveru
+</div>
+<div class="dpv-top">
+<div class="dpv-text">
+<p>Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souhrnu az po podrobne analyzy.</strong></p>
+</div>
+<div class="dpv-text">
+<p><span class="accent-teal"><strong>Prvni dve urovne</strong></span> <strong>(Obecny souhrn)</strong> se zameruji na odpovedi agregovane do sirsich kategorii (skvely, prumerny, slaby vysledek). Agregovane odpovedi nejprve porovnavame s externimi benchmarky a pote zmapujeme situaci uvnitr firmy.</p>
+</div>
+<div class="dpv-text">
+<p><span class="accent-teal"><strong>Dalsi dve urovne</strong></span> <strong>(Podrobne analyzy)</strong> se zameruji na detailni rozlozeni odpovedi. Na treti urovni uvidite procentualni podil odpovedi na kazdou otazku - od „Urcite ano“ po „Urcite ne“ - na urovni cele firmy. Ctvrta uroven pak ukaze, jak se odpovedi rozdeluji mezi jednotlive organizacni jednotky. S kazdym krokem ziskate hlubsi prehled o deni ve firme.</p>
+</div>
+</div>
+<div class="dpv-divider">
+<div class="dpv-left-title">
+Obecny souhrn
+</div>
+<div class="dpv-right-title">
+Podrobne analyzy
+</div>
+</div>
+<div class="dpv-bottom">
+<div class="dpv-block left">
+<div class="dpv-label">
+Agregace:
+</div>
+<div class="dpv-copy">
+<strong>Skvely vysledek</strong> = Urcite ano a Spise ano,<br><strong>Prumerny vysledek</strong> = Nemohu se rozhodnout,<br><strong>Slaby vysledek</strong> = Urcite ne, Spise ne
+</div>
+</div>
+<div class="dpv-block right">
+<div class="dpv-label">
+Agregace:
+</div>
+<div class="dpv-copy">
+Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne
+</div>
+</div>
+</div>
+<div class="dpv-steps">
+<div class="dpv-step">
+<span>1.</span> Srovnani s benchmarky
+</div>
+<div class="dpv-step">
+<span>2.</span> Drivery za firmu
+</div>
+<div class="dpv-step">
+<span>3.</span> Detail otazek
+</div>
+<div class="dpv-step">
+<span>4.</span> Drivery v detailu za organizacni jednotku
+</div>
+</div>
+</div>
+<!-- Sledovane drivery -->
+<div class="slide sledovane-drivery">
+<div class="sd-header">
+<div class="section-title">
+Sledovane drivery
+</div>
+<div class="section-description">
+<p>V modelu sledujeme oblasti, ktere typicky nejvice souviseji s engagementem. Jejich kombinace vytvari dobry zaklad pro prioritizaci dalsich kroku.</p>
+</div>
+</div>
+<div class="sd-grid">
+<div class="sd-card">
+<span>01</span><strong>Smysl a vyznam prace</strong>
+</div>
+<div class="sd-card">
+<span>02</span><strong>Spoluprace a vztahy</strong>
+</div>
+<div class="sd-card">
+<span>03</span><strong>Vedeni a komunikace</strong>
+</div>
+<div class="sd-card">
+<span>04</span><strong>Rozvoj a rust</strong>
+</div>
+<div class="sd-card">
+<span>05</span><strong>Nastroje a podminky</strong>
+</div>
+<div class="sd-card">
+<span>06</span><strong>Oceneni a uznani</strong>
+</div>
+</div>
+</div>
+<!-- Prezentace driveru -->
+<div class="slide prezentace-driveru">
+<div class="pd-header">
+<div class="section-title">
+Jak cist vysledky driveru
+</div>
+<div class="section-description">
+<p>Kazdy driver posuzujeme ze dvou uhlu. Sledujeme, jak silne souvisi s engagementem a zaroven jak pozitivne nebo negativne jej zamestnanci hodnoti.</p>
+</div>
+</div>
+<div class="pd-layout">
+<div class="pd-axis-card impact">
+<div class="pd-axis-kicker">
+Sila vztahu
+</div>
+<div class="pd-axis-title">
+Jak moc driver ovlivnuje engagement
+</div>
+<p>
+Vyssi hodnota znamena, ze posun v dane oblasti se s velkou pravdepodobnosti promita i do celkoveho engagementu.
+</p>
+</div>
+<div class="pd-axis-card score">
+<div class="pd-axis-kicker">
+Aktualni skore
+</div>
+<div class="pd-axis-title">
+Jak si firma v dane oblasti vede
+</div>
+<p>
+Nizsi hodnoceni ukazuje, ze zamestnanci tuto oblast casto zazivaji mene pozitivne a muze jit o dulezitou prioritu.
+</p>
+</div>
+</div>
+</div>
+<!-- Jak cist drivery benchmark -->
+<div class="slide jakcist-dr-bench">
+<div class="jdb-header">
+<div class="section-title">
+Jak cist? Drivery a benchmark
+</div>
+<div class="section-description">
+<p>Kombinace sily vztahu a aktualniho skore pomaha rozlisit, ktere oblasti jsou strategicky nejdulezitejsi a kde firma ztraci oproti trhu.</p>
+</div>
+</div>
+<div class="jdb-quadrants">
+<div class="jdb-box high-priority">
+<div class="jdb-box-title">
+Vysoka priorita
+</div>
+<p>
+Silny vliv na engagement a soucasne slabe skore.
+</p>
+</div>
+<div class="jdb-box maintain">
+<div class="jdb-box-title">
+Udrzet
+</div>
+<p>
+Silny vliv a soucasne dobre vysledky.
+</p>
+</div>
+<div class="jdb-box monitor">
+<div class="jdb-box-title">
+Monitorovat
+</div>
+<p>
+Slabsi vliv, ale horsi skore nez benchmark.
+</p>
+</div>
+<div class="jdb-box secondary">
+<div class="jdb-box-title">
+Sekundarni fokus
+</div>
+<p>
+Slabsi vliv a zaroven prijatelne vysledky.
+</p>
+</div>
+</div>
+</div>
+<!-- Jak cist drivery celkem -->
+<div class="slide jakcist-dr-celkem">
+<div class="jdc-header">
+<div class="section-title">
+Jak cist? Drivery celkem
+</div>
+<div class="section-description">
+<p>Na souhrnnem slidu se kombinuje informace o sile vztahu s engagementem a o tom, jak si firma v danem driveru skutecne stoji.</p>
+</div>
+</div>
+<div class="jdc-layout">
+<div class="jdc-leftcallout">
+<div class="jdc-leftcallout-text">
+<p>Nejvyse postavene drivery by mely vstupovat do prioritizace akcnich kroku jako prvni, zejmena pokud zaroven nedosahuji silneho skore.</p>
+</div>
+<div class="jdc-leftcallout-arrow">
+
+</div>
+</div>
+<div class="jdc-rightlist">
+<div class="jdc-item">
+<div class="jdc-pct">
+82 %
+</div>
+<div class="jdc-item-text">
+Smysl a vyznam prace ma nejsilnejsi vztah k engagementu a soucasne patri k nejdulezitejsim oblastem pro dalsi rozvoj.
+</div>
+</div>
+<div class="jdc-item">
+<div class="jdc-pct">
+74 %
+</div>
+<div class="jdc-item-text">
+Kvalita vedeni a komunikace je druhy nejsilnejsi driver. I mensi posun v teto oblasti se muze projevit napric celym zazitkem zamestnancu.
+</div>
+</div>
+<div class="jdc-item">
+<div class="jdc-pct">
+68 %
+</div>
+<div class="jdc-item-text">
+Rozvoj a rust drzi stred pole. Pokud je vsak dlouhodobe slabsi, muze brzdit udrzeni talentu i vnitrni motivaci.
+</div>
+</div>
+</div>
+</div>
+<div class="jdc-legend">
+<div class="jdc-legend-label">
+Vysvetlivka
+</div>
+<div class="jdc-legend-items">
+<div class="jdc-legend-item">
+<i class="jdc-swatch teal"></i>Silne skore
+</div>
+<div class="jdc-legend-item">
+<i class="jdc-swatch tealLight"></i>Spise silne
+</div>
+<div class="jdc-legend-item">
+<i class="jdc-swatch grey"></i>Neutralni
+</div>
+<div class="jdc-legend-item">
+<i class="jdc-swatch pink"></i>Spise slabe
+</div>
+<div class="jdc-legend-item">
+<i class="jdc-swatch pinkStrong"></i>Slabe
+</div>
+</div>
+</div>
+</div>
+<div class="slide driver-company-v2">
+<div class="drvco-kicker">
+Vysledky
+</div>
+<div class="drvco-head">
+<div class="drvco-title">
+Drivery za firmu
+</div>
+</div>
+<div class="drvco-subheads-row">
+<div class="drvco-left-subhead">
+Top 3
+</div>
+<div class="drvco-right-subhead">
+Bottom 3
+</div>
+</div>
+<div class="drvco-grid">
+<div class="drvco-col">
+<div class="drvco-block">
+<div class="drvco-block-title">
+Ja a firma
+</div>
+<div class="drvco-plot">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="633"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-item">
+<span>64 %</span>Znam firemni cile.
+</div>
+<div class="drvco-item">
+<span>71 %</span>Pro tuto firmu je rozhodne dobre pracovat.
+</div>
+<div class="drvco-item">
+<span>89 %</span>Pracovni prostredi je bez sikany a obtezovani.
+</div>
+<div class="drvco-item">
+<span>75 %</span>Doporucuji tuto firmu jako zamestnavatele.
+</div>
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">
+Ja a vedouci
+</div>
+<div class="drvco-plot">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="633"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-item">
+<span>79 %</span>Muj vedouci mi zadava ukoly jasne a presne.
+</div>
+<div class="drvco-item">
+<span>89 %</span>Mam dobry vztah se svym vedoucim.
+</div>
+<div class="drvco-item">
+<span>85 %</span>V pracovnich otazkach me vedouci vzdy vyslysi a da prostor k vyjadreni.
+</div>
+<div class="drvco-item">
+<span>70 %</span>Dostavam pravidelnou zpetnou vazbu od meho vedouciho.
+</div>
+<div class="drvco-item">
+<span>73 %</span>Dostavam realnou podporu od sveho vedouciho.
+</div>
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">
+Ja a tym
+</div>
+<div class="drvco-plot">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid figure-img" width="633"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-item">
+<span>85 %</span>Svym kolegum/kolegynim duveruji.
+</div>
+<div class="drvco-item">
+<span>88 %</span>Ja a kolegove z meho oddeleni resime problemy tak, aby se jiz neopakovaly.
+</div>
+<div class="drvco-item">
+<span>85 %</span>Na mem oddeleni se dokazeme bavit o chybach a efektivne je resit.
+</div>
+<div class="drvco-item">
+<span>83 %</span>Cile meho oddeleni jsou mi jasne.
+</div>
+<div class="drvco-item">
+<span>45 %</span>Me oddeleni dostava dostatecnou podporu od oddeleni, se kterymi spolupracujeme.
+</div>
+</div>
+</div>
+<div class="drvco-col">
+<div class="drvco-block">
+<div class="drvco-block-title">
+Ja a firma
+</div>
+<div class="drvco-plot">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="633"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-item">
+<span>64 %</span>Znam firemni cile.
+</div>
+<div class="drvco-item">
+<span>71 %</span>Pro tuto firmu je rozhodne dobre pracovat.
+</div>
+<div class="drvco-item">
+<span>89 %</span>Pracovni prostredi je bez sikany a obtezovani.
+</div>
+<div class="drvco-item">
+<span>75 %</span>Doporucuji tuto firmu jako zamestnavatele.
+</div>
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">
+Ja a vedouci
+</div>
+<div class="drvco-plot">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="633"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-item">
+<span>79 %</span>Muj vedouci mi zadava ukoly jasne a presne.
+</div>
+<div class="drvco-item">
+<span>89 %</span>Mam dobry vztah se svym vedoucim.
+</div>
+<div class="drvco-item">
+<span>85 %</span>V pracovnich otazkach me vedouci vzdy vyslysi a da prostor k vyjadreni.
+</div>
+<div class="drvco-item">
+<span>70 %</span>Dostavam pravidelnou zpetnou vazbu od meho vedouciho.
+</div>
+<div class="drvco-item">
+<span>73 %</span>Dostavam realnou podporu od sveho vedouciho.
+</div>
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">
+Ja a tym
+</div>
+<div class="drvco-plot">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img" width="633"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-item">
+<span>85 %</span>Svym kolegum/kolegynim duveruji.
+</div>
+<div class="drvco-item">
+<span>88 %</span>Ja a kolegove z meho oddeleni resime problemy tak, aby se jiz neopakovaly.
+</div>
+<div class="drvco-item">
+<span>85 %</span>Na mem oddeleni se dokazeme bavit o chybach a efektivne je resit.
+</div>
+<div class="drvco-item">
+<span>83 %</span>Cile meho oddeleni jsou mi jasne.
+</div>
+<div class="drvco-item">
+<span>45 %</span>Me oddeleni dostava dostatecnou podporu od oddeleni, se kterymi spolupracujeme.
+</div>
+</div>
+</div>
+</div>
+<div class="drvco-footer">
+Ivod - Uroven engagementu - <span>Zkoumana temata</span> (Ja a firma - Ja a vedouci - Ja a tym) - Srovnani oddeleni
+</div>
+</div>
+<div class="slide driver-detail2-v2">
+<div class="drvdet-kicker">
+Vysledky
+</div>
+<div class="drvdet-title">
+Driver 1/5 - Detailne
+</div>
+<div class="drvdet-plot-full">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">
+Skala odpovedi
+</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch teal"></i>Urcite ano = skore 1
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch tealLight"></i>Spise ano = skore 2
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pink"></i>Spise ne = skore 4
+</div>
+<div class="jakcist-legend-item">
+<i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5
+</div>
+</div>
+</div>
+</div>
+<div class="slide driver-oddeleni-v2">
+<div class="drvodd-kicker">
+Vysledky
+</div>
+<div class="drvodd-title">
+Driver 1/5 - Detailne - urcite ano srovnani dle oddeleni
+</div>
+<div class="drvodd-chart">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="drvodd-legend">
+<div class="drvodd-legend-label">
+Skala odpovedi
+</div>
+<div class="drvodd-legend-item">
+<i class="drvodd-swatch grey"></i>Mira spokojenosti oddeleni
+</div>
+<div class="drvodd-legend-item">
+<i class="drvodd-swatch teal"></i>Mira spokojenosti za firmu
+</div>
+</div>
+</div>
+<!-------- Otázky, které dopadly hůře ----------------------->
+<div class="slide section-cover-v2">
+<div class="scv-badge">
+04
+</div>
+<div class="scv-title">
+Problematicke otazky
+</div>
+<div class="scv-copy">
+Pokud se nejaka otazka ukaze jako problematicka, verime, ze je dulezite se na ni podivat hloubeji. Proto v nasledujici sekci rozebereme otazky, ktere maji zastoupeni skvelych odpovedi nizsi nez XY %. Tuto hranici jsme urcili na zaklade aktualnich trendu a vlastnich analyz.
+</div>
+<div class="scv-progress">
+<p><span class="on"></span> <span class="on"></span> <span class="on"></span> <span class="on"></span> <span class="ghost"></span> <span class="ghost"></span></p>
+</div>
+</div>
+<div class="slide problematic-breakdown-v2">
+<div class="pbv-kicker">
+Vysledky
+</div>
+<div class="pbv-title">
+Rozpad problematicke otazky 1 dle <span>oddeleni</span>
+</div>
+<div class="pbv-chart">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid figure-img" width="1132"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="pbv-legend">
+<div class="pbv-legend-label">
+Skala odpovedi
+</div>
+<div class="pbv-legend-item">
+<i class="pbv-swatch teal"></i>Skvely vysledek
+</div>
+<div class="pbv-legend-item">
+<i class="pbv-swatch grey"></i>Prumerny vysledek
+</div>
+<div class="pbv-legend-item">
+<i class="pbv-swatch pink"></i>Spatny vysledek
+</div>
+</div>
+</div>
+<div class="slide problematic-breakdown-v2">
+<div class="pbv-kicker">
+Vysledky
+</div>
+<div class="pbv-title">
+Rozpad problematicke otazky 1 dle <span>seniority</span>
+</div>
+<div class="pbv-chart pbv-chart-wide">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid figure-img" width="1478"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="pbv-legend">
+<div class="pbv-legend-label">
+Skala odpovedi
+</div>
+<div class="pbv-legend-item">
+<i class="pbv-swatch teal"></i>Skvely vysledek
+</div>
+<div class="pbv-legend-item">
+<i class="pbv-swatch grey"></i>Prumerny vysledek
+</div>
+<div class="pbv-legend-item">
+<i class="pbv-swatch pink"></i>Spatny vysledek
+</div>
+</div>
+</div>
+<!----------- Multiple choice otázky ------------------------>
+<div class="slide section-cover-v2">
+<div class="scv-badge">
+05
+</div>
+<div class="scv-title">
+Multiple choice otazky
+</div>
+<div class="scv-copy">
+Ne vsechny otazky jsou hodnocene na skale od Urcite ano po Urcite ne. V nekterych otazkach rovnez zkoumame preference respondentu s moznosti vybrat vice odpovedi. Tem je venovana nasledujici sekce.
+</div>
+<div class="scv-progress">
+<p><span class="on"></span> <span class="on"></span> <span class="on"></span> <span class="on"></span> <span class="on"></span> <span class="ghost"></span> <span class="ghost"></span> <span class="ghost"></span></p>
+</div>
+</div>
+<div class="slide multiple-howto-v2">
+<div class="jakcist-header jakcist-header--inset">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">
+Jak cist?
+</div>
+<div class="jakcist-header-sub">
+Multiple choice otazky
+</div>
+</div>
+<div class="jakcist-q q1">
+?
+</div>
+<div class="jakcist-q q2">
+?
+</div>
+<div class="jakcist-q q3">
+?
+</div>
+</div>
+<div class="mcv-body">
+<div class="mcv-text">
+<div class="mcv-formula">
+1/3 = 33 %
+</div>
+<div class="mcv-copy">
+Tuto moznost preferuje<br><strong>33 %</strong> respondentu
+</div>
+</div>
+<div class="mcv-chart">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid figure-img" width="787"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="slide multiple-results-v2">
+<div class="pbv-kicker">
+Vysledky
+</div>
+<div class="mrv-title">
+Srovnani odpovedi na multiple choice otazku
+</div>
+<div class="mrv-chart">
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="report_editable_api_files/figure-html/unnamed-chunk-33-1.png" class="img-fluid figure-img" width="1392"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+ <!-- /content -->
+
+
+
+
+</body></html>

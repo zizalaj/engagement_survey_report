@@ -34,7 +34,7 @@ params:
 
 <!-- Bottom-left SVG logo (update filename as needed) -->
 
-<img src="ju_logo.svg" alt="juiceUP logo" class="brand-logo">
+<img src="visuals/ju_logo.svg" alt="juiceUP logo" class="brand-logo">
 
 ```{r}
 #| echo: false
@@ -389,7 +389,7 @@ openend_present <- include_openended(final_long_df)
 
 zakl_info <- final_long_df %>%
   filter(group_title == "Základní info" & typ_otazky == "multiple_choice")%>%
-  dplyr::select(odpoved_hodnota,otazka_title)
+  dplyr::select(odpoved_hodnota,otazka_title,respondent_id)
 
 zakl_info_otazky <- unique(zakl_info$otazka_title)
 
@@ -430,9 +430,10 @@ oddeleni_index <- str_detect(zakl_info_otazky,oddeleni_expr)
 oddeleni_ot <- zakl_info_otazky[oddeleni_index]
 
 oddeleni <- zakl_info %>%
-  filter(otazka_title == oddeleni_ot)%>%
-  group_by(odpoved_hodnota) %>%
-  summarise(pocet_respondentu = n())%>%
+  filter(otazka_title == oddeleni_ot) %>%
+  group_by(respondent_id) %>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota))) %>%
+  count(odpoved_hodnota, name = "pocet_respondentu") %>%
   mutate(pocet_zamestnancu = 0)
 
 
@@ -450,9 +451,9 @@ vek_souhrn <- final_long_df %>%
   filter(group_title == "Základní info" & typ_otazky == "number") %>%
   dplyr::select(respondent_id,odpoved_hodnota) %>%
   mutate(odpoved_hodnota = as.numeric(odpoved_hodnota))%>%
-  distinct(respondent_id,odpoved_hodnota)%>%
-  group_by(odpoved_hodnota)%>%
-  summarise(pocet=n())%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name = "pocet")%>%
   rename(vek = odpoved_hodnota)
 
 
@@ -465,13 +466,13 @@ pozice_index <- str_detect(zakl_info_otazky, pozice_expr)
 
 pozice_ot <- zakl_info_otazky[pozice_index]
 
+
 pozice_souhrn <- zakl_info %>%
   filter(otazka_title == pozice_ot)%>%
-  group_by(odpoved_hodnota)%>%
-  summarise(pocet = n())%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name="pocet")%>%
   rename(pozice = odpoved_hodnota)
-
-
 
 #### seniorita
 
@@ -489,8 +490,9 @@ doba_ot <- zakl_info_otazky[doba_index]
 
 doba_souhrn <- zakl_info %>%
   filter(otazka_title == doba_ot)%>%
-  group_by(odpoved_hodnota)%>%
-  summarise(pocet = n())%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name="pocet")%>%
   mutate(az = case_when(
     str_detect(odpoved_hodnota,do_expr) == T ~ 0,
     str_detect(odpoved_hodnota,vice_expr) == T ~ 100,
@@ -509,28 +511,52 @@ engagement_index_celkem <- final_long_df %>%
   mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
          uroven_engagementu = as.factor(case_when(
            odpoved_hodnota <= 2 ~ "Úplný engagement",
-           odpoved_hodnota == 3 ~ "Částěčný engagement",
+           odpoved_hodnota == 3 ~ "Částečný engagement",
            odpoved_hodnota > 3 ~ "Slabý engagement"
          ))
          ) %>%
   group_by(uroven_engagementu) %>%
   summarise(n = n()) %>%
-  mutate(pct = round((n/sum(n))*100,2))
+  mutate(pct = round((n/sum(n))*100,1))
+
+uplny_engagement <- engagement_index_celkem %>%
+  filter(uroven_engagementu == "Úplný engagement")%>%
+  pull(pct)
+
+castecny_engagement <- engagement_index_celkem %>%
+  filter(uroven_engagementu == "Částečný engagement")%>%
+  pull(pct)
+
+slaby_engagement <- engagement_index_celkem %>%
+  filter(uroven_engagementu == "Slabý engagement")%>%
+  pull(pct)
 
 #### engagementové otázky
-engegement_index_otazky <- final_long_df %>%
+eng_otazky <- ciselnik_df %>%
+  filter(group_title == "Engagement") %>%
+  pull(otazka_title)
+
+
+engagement_index_otazky <- final_long_df %>%
   filter(group_title == "Engagement") %>%
   mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
          uroven_engagementu = as.factor(case_when(
            odpoved_hodnota <= 2 ~ "Úplný engagement",
-           odpoved_hodnota == 3 ~ "Částěčný engagement",
+           odpoved_hodnota == 3 ~ "Částečný engagement",
            odpoved_hodnota > 3 ~ "Slabý engagement"
          ))) %>%
   group_by(uroven_engagementu,otazka_title) %>%
   summarise(n = n()) %>%
   group_by(otazka_title) %>%
-  mutate(pct = round((n/sum(n))*100,2)) %>%
+  mutate(pct = round((n/sum(n))*100,1),
+         otazka_title = factor(otazka_title, levels = rev(eng_otazky))) %>%
   ungroup()
+
+### pořadí hodnot
+eng_order <- c("Úplný engagement","Částečný engagement","Slabý engagement")
+
+engagement_index_otazky$uroven_engagementu <- factor(engagement_index_otazky$uroven_engagementu,
+                            levels = rev(eng_order))
 
 
 ##### individuální míra engagementu
@@ -549,9 +575,16 @@ ind_engagement <- final_long_df %>%
   distinct(respondent_id,ind_mira) %>%
   group_by(ind_mira) %>%
   summarise(n = n()) %>%
-  mutate(pct = round((n/sum(n))*100,2))
+  mutate(pct = round((n/sum(n))*100,1))
 
+engaged <- ind_engagement%>%filter(ind_mira == "Engaged")%>%pull(pct)
+engaged <- ifelse(length(engaged)>0,engaged,0)
+potential <- ind_engagement%>%filter(ind_mira == "Potential")%>%pull(pct)
+potential <- ifelse(length(potential)>0,potential,0)
+disengaged <- ind_engagement%>%filter(ind_mira == "Disengaged")%>%pull(pct)
+disengaged <- ifelse(length(disengaged)>0,disengaged,0)
 
+###############################################################################
 ############# drivery 
 
 drivery_overview <- final_long_df %>%
@@ -643,6 +676,27 @@ bench_df_complete <- bench_df_long %>%
          otazka_title = clean_text(otazka_title))
 
 
+###### jednotlivé benchmarky engagementu
+
+bench_cr_val <- bench_df_complete %>% filter(otazka_title=="Česká republika")%>%
+  pull(odpoved_hodnota)
+
+bench_cr_name <- bench_df_complete %>% filter(otazka_title=="Česká republika")%>%
+  pull(otazka_title)
+
+
+bench_us_val <- bench_df_complete %>% filter(otazka_title=="USA")%>%
+  pull(odpoved_hodnota)
+
+bench_us_name <- bench_df_complete %>% filter(otazka_title=="USA")%>%
+  pull(otazka_title)
+
+bench_ger_val <- bench_df_complete %>% filter(otazka_title=="Německo")%>%
+  pull(odpoved_hodnota)
+
+bench_ger_name <- bench_df_complete %>% filter(otazka_title=="Německo")%>%
+  pull(otazka_title)
+
 ### aktuální výsledky vs benchmarky
 
 #drivery_clean <- drivery_otazky %>%
@@ -685,7 +739,7 @@ horsi_vysledky_present <- include_horsi(drivery_benchmark)
 </div>
 
 
-<!----- Co nás dnes čeká ---------->
+<!----- Co nas ceka ---------->
 
 ```{r}
 #| echo: false
@@ -718,63 +772,6 @@ problematic_progress_filled <- 4
 multiple_choice_progress_total <- 8
 multiple_choice_progress_filled <- 5
 ```
-
-<div class="slide agenda-slide">
-<div class="agenda-content">
-<div class="agenda-title">Co nás dnes čeká</div>
-
-<ul class="agenda-list">
-
-<li class="agenda-item">
-<span class="agenda-num">01</span>
-<span class="agenda-text">Průzkum v číslech</span>
-</li>
-
-<li class="agenda-item">
-<span class="agenda-num">02</span>
-<span class="agenda-text">Výsledky engagementu</span>
-</li>
-
-<li class="agenda-item">
-<span class="agenda-num">03</span>
-<span class="agenda-text">Výsledky jednotlivých driverů</span>
-</li>
-
-<li class="agenda-item">
-<span class="agenda-num">04</span>
-<span class="agenda-text">Otázky, které dopadly hůře</span>
-</li>
-
-<li class="agenda-item">
-<span class="agenda-num">05</span>
-<span class="agenda-text">Multiple choice otázky</span>
-</li>
-
-<li class="agenda-item">
-<span class="agenda-num">06</span>
-<span class="agenda-text">Otevřené otázky</span>
-</li>
-
-<li class="agenda-item">
-<span class="agenda-num">07</span>
-<span class="agenda-text">Závěrečná shrnutí a doporučení</span>
-</li>
-
-</ul>
-
-</div>
-
-<div class="scv-progress">
-```{r}
-#| echo: false
-#| results: asis
-
-cat(progress_rectangles(agenda_progress_filled, agenda_progress_total))
-```
-</div>
-
-
-</div>
 
 
 <!----------- Co nás dnes čeká --------------------------------------->
@@ -930,20 +927,6 @@ cat(progress_rectangles(pvc_progress$filled, pvc_progress$total))
 <!-------- Průzkum v číslech výsledky --------------->
 
 <div class="slide survey-numbers-slide">
-
-```{r}
-#| echo: false
-#| warning: false
-#| message: false
-
-
-################### základní informace
-
-
-
-
-
-```
 
 <div class="survey-title">Průzkum v číslech</div>
 
@@ -1216,8 +1199,8 @@ mock_scale_cols <- c(
   "Rozhodne ano" = "#63E8C6",
   "Spise ano" = "#A8F2DE",
   "Ani ano, ani ne" = "#BFC4CA",
-  "Spise ne" = "#FFC2CD",
-  "Rozhodne ne" = "#FF7B92"
+  "Spise ne" = "#FF8ADE",
+  "Rozhodne ne" = "#FF67AA"
 )
 
 mock_engagement_breakdown <- tibble(
@@ -1318,9 +1301,9 @@ Lorem ipsum dit amet podnadpis
 <div class="jakcist-right">
 <div class="jakcist-right-title">Engagement index pro otazku</div>
 <div class="jakcist-bar">
-<div class="jakcist-bar-seg teal" style="width:26%"><span>10 %</span></div>
-<div class="jakcist-bar-seg grey" style="width:58%"><span>100 %</span></div>
-<div class="jakcist-bar-seg pink" style="width:16%"><span>15 %</span></div>
+<div class="jakcist-bar-seg teal" style="width:26%"><span>26 %</span></div>
+<div class="jakcist-bar-seg grey" style="width:58%"><span>58 %</span></div>
+<div class="jakcist-bar-seg pink" style="width:16%"><span>16 %</span></div>
 </div>
 </div>
 </div>
@@ -1329,9 +1312,9 @@ Lorem ipsum dit amet podnadpis
 <div class="jakcist-legend-label">Skala odpovedi</div>
 <div class="jakcist-legend-items">
 <div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Urcite ano = skore 1</div>
-<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spise ano = skore 2</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Spise ano = skore 2</div>
 <div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3</div>
-<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spise ne = skore 4</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Spise ne = skore 4</div>
 <div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5</div>
 </div>
 </div>
@@ -1412,35 +1395,35 @@ Lorem ipsum dit amet podnadpis
 <div class="ei-kpis">
 <div class="ei-kpi">
 <p class="ei-kpi-head">Uplny engagement</p>
-<p class="ei-kpi-value accent-teal">42 %</p>
+<p class="ei-kpi-value accent-teal">`r uplny_engagement` %</p>
 <p class="ei-kpi-desc">Uplny engagement reflektuje velmi dobrou atmosferu uvnitr firmy a kladny vztah zamestnancu k praci i firme. Za dobrou naladou muze stat skupina velmi spokojenych zamestnancu, nebo plosna spokojenost s nekterymi aspekty prace a firemni kultury.</p>
 </div>
 <div class="ei-kpi">
 <p class="ei-kpi-head">Castecny engagement</p>
-<p class="ei-kpi-value accent-grey">33 %</p>
+<p class="ei-kpi-value accent-grey">`r castecny_engagement` %</p>
 <p class="ei-kpi-desc">Castecny engagement ukazuje na dilci nedostatky, v nichz spociva potencial firmy pro zlepseni. Klicove je pochopit, zda za vysledky stoji skupina zamestnancu nebo vysledky nekterych z konkretnich engagementovych otazek. Kompletni obrazek se ziska srovnanim s individualni mirou engagementu.</p>
 </div>
 <div class="ei-kpi">
 <p class="ei-kpi-head">Slaby engagement</p>
-<p class="ei-kpi-value accent-pink">25 %</p>
+<p class="ei-kpi-value accent-pink">`r slaby_engagement` %</p>
 <p class="ei-kpi-desc">Slaby engagement indikuje spatnou atmosferu, ktera muze vest az k odchodu nekterych zamestnancu. Opet je dulezite urcit, zda slaby vysledek ukazuje na skupinu zamestnancu nebo na plosnou nespokojenost s nekterymi aspekty prace. Ke spravnemu vyhodnoceni je dobre porovnat tento vysledek s individualni mirou engagementu.</p>
 </div>
 </div>
 </div>
 <div class="ei-bench">
 <div class="ei-bench-title">International benchmark</div>
-<div class="ei-bench-item"><div class="ei-bench-value">15 %</div><div class="ei-bench-label">CZECH REPUBLIC</div></div>
-<div class="ei-bench-item"><div class="ei-bench-value">32 %</div><div class="ei-bench-label">U.S.</div></div>
-<div class="ei-bench-item"><div class="ei-bench-value">37 %</div><div class="ei-bench-label">WHM</div></div>
+<div class="ei-bench-item"><div class="ei-bench-value">`r bench_cr_val` %</div><div class="ei-bench-label">`r bench_cr_name`</div></div>
+<div class="ei-bench-item"><div class="ei-bench-value">`r bench_us_val` %</div><div class="ei-bench-label">`r bench_us_name`</div></div>
+<div class="ei-bench-item"><div class="ei-bench-value">`r bench_ger_val` %</div><div class="ei-bench-label">`r bench_ger_name`</div></div>
 </div>
 </div>
 <div class="ei-legend">
 <div class="ei-legend-label">Skala odpovedi</div>
 <div class="ei-legend-items">
 <div class="ei-legend-item"><i class="ei-swatch teal"></i>Urcite ano = skore 1</div>
-<div class="ei-legend-item"><i class="ei-swatch grey1"></i>Spise ano = skore 2</div>
-<div class="ei-legend-item"><i class="ei-swatch grey2"></i>Nemohu se rozhodnout = skore 3</div>
-<div class="ei-legend-item"><i class="ei-swatch pink"></i>Spise ne = skore 4</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Spise ano = skore 2</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Nemohu se rozhodnout = skore 3</div>
+<div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Spise ne = skore 4</div>
 <div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Urcite ne = skore 5</div>
 </div>
 </div>
@@ -1454,7 +1437,7 @@ Lorem ipsum dit amet podnadpis
 <p class="ef-kicker">Vysledky</p>
 <h1 class="ef-title">Engagement index <span class="accent-teal">za firmu</span></h1>
 </div>
-<div class="ef-right-head">Engagement se meril nasledujicimi otazkami:</div>
+<div class="ef-right-head" style="padding-top: 34px;">Engagement se meril nasledujicimi otazkami:</div>
 </div>
 <div class="ef-main">
 <div class="ef-left">
@@ -1464,7 +1447,7 @@ Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem
 dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum
 dit amet podnadpis
 </p>
-<div class="ef-brace"></div>
+<div class="ef-brace"><img src="visuals/brace.svg" alt="" class="ef-brace-img"></div>
 </div>
 <div class="ef-text-block">
 <p>
@@ -1472,31 +1455,52 @@ Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem
 dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit
 amet podnadpis
 </p>
-<div class="ef-brace"></div>
+<div class="ef-brace"><img src="visuals/brace.svg" alt="" class="ef-brace-img"></div>
 </div>
 </div>
+
 <div class="ef-right">
-<div class="ef-question-list">
-<div class="ef-question-group">
-<div class="ef-question-title">Jsem hrdy</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
-<div class="ef-question-group">
-<div class="ef-question-title">Jsem hrdy</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
-<div class="ef-question-group">
-<div class="ef-question-title">Bavi me to</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
-<div class="ef-question-group">
-<div class="ef-question-title">Smysl</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
+<div class="ef-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 7.1
+#| fig-height: 6.8
+
+colors_eng <- c("Úplný engagement" = "#63E8C6", "Částečný engagement" = "#c5c5c5", 
+            "Slabý engagement" = "#ff67aa")
+
+ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_engagementu))+
+  geom_col(position = position_stack(),width = 0.25)+
+  geom_text(
+      aes(label = paste0(pct, "%")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+  scale_fill_manual(values = colors_eng)+
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )+
+  coord_flip()
+```
 </div>
 </div>
 </div>
@@ -1512,7 +1516,6 @@ amet podnadpis
 </div>
 </div>
 
-
 <!-- Individualni mira engagementu -->
 <div class="slide engindex-slide indeng-slide">
 <div class="ei-header">
@@ -1524,18 +1527,18 @@ amet podnadpis
 <div class="ei-card-title">Engagement index za firmu</div>
 <div class="ei-kpis">
 <div class="ei-kpi">
-<p class="ei-kpi-head">Uplny engagement</p>
-<p class="ei-kpi-value accent-teal">42 %</p>
+<p class="ei-kpi-head">Engaged</p>
+<p class="ei-kpi-value accent-teal">`r engaged` %</p>
 <p class="ei-kpi-desc">Do kategorie fully engaged spadaji lide, kteri pracuji naplno, svoji praci maji radi a zaroven maji radi sveho zamestnavatele.</p>
 </div>
 <div class="ei-kpi">
-<p class="ei-kpi-head">Castecny engagement</p>
-<p class="ei-kpi-value accent-grey">33 %</p>
+<p class="ei-kpi-head">Potentials</p>
+<p class="ei-kpi-value accent-grey">`r potential` %</p>
 <p class="ei-kpi-desc">V kategorii castecny engagement jsou lide, kteri maji radi svoji firmu, ale obcas jim neco nevyhovuje. Z toho duvodu je take jejich vykon promenlivy a ne tak stabilni. Zaroven tato kategorie predstavuje nejvetsi potencial pro rust a firma s ni muze dobre do budoucna pracovat.</p>
 </div>
 <div class="ei-kpi">
-<p class="ei-kpi-head">Slaby engagement</p>
-<p class="ei-kpi-value accent-pink">25 %</p>
+<p class="ei-kpi-head">Disengaged</p>
+<p class="ei-kpi-value accent-pink">`r disengaged` %</p>
 <p class="ei-kpi-desc">Zde jsou lide, kteri k firme a tomu, co v ni delaji, maji maly nebo zadny vztah. Mohou zvazovat odchod nebo zmenu zamestnani. Jejich pracovni nasazeni je male a mohou ve svem okoli sirit negativni naladu.</p>
 </div>
 </div>
@@ -1710,14 +1713,10 @@ ggplot(mock_departments_3_long, aes(x = dept, y = pct, fill = response)) +
 <!-- Drivery engagementu oddelovac sekce -->
 <div class="slide section-slide">
 <div class="section-number">03</div>
-<div class="section-title">Drivery engagementu</div>
+<div class="section-title">Vysledky klicovych driveru</div>
 <div class="section-description">
-<p>
-Drivery engagementu popisuji, ktere oblasti maji nejsilnejsi vztah k celkove zkusenosti zamestnancu. Pomahaji urcit, na co se zamerit nejdrive.
-</p>
-<p>
-Nasledujici slidy ukazuji, jak drivery cist a jak vypadaji hlavni vysledky na urovni firmy.
-</p>
+Engagement neexistuje ve vakuu. Vysledky engagementu mohou byt znacne ovlivneny ruznymi klicovymi tematy, tzv. drivery engagementu.
+Moduly zarazene do pruzkumu jsou aktualnimi daty podlozene vyznamne drivery engagementu.
 </div>
 <div class="scv-progress">
 ```{r}
@@ -1728,6 +1727,74 @@ dri_progress <- get_progress(agenda_cfg, "Výsledky jednotlivých driverů")
 
 cat(progress_rectangles(dri_progress$filled, dri_progress$total))
 ```
+</div>
+</div>
+
+<!------------ Sledovane drivery ----------------->
+
+<div class="slide drivers-list-v3">
+<div class="drv3-title">Merene/sledovane <span class="accent-teal">drivery</span></div>
+<div class="drv3-lead">
+Diky neustalemu sledovani trendu v oblasti engagementu a analyze nasich dat jsme vybrali moduly, ktere jsou podle nas nejvyznamnejsimi drivery engagementu. Pojdme si je ted podrobneji predstavit
+</div>
+<div class="drv3-grid">
+<div class="drv3-item">
+<div class="drv3-item-title">Ja a firma</div>
+<div class="drv3-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Ja a tym</div>
+<div class="drv3-item-text">Kvalita spoluprace uvnitr tymu, duvera mezi kolegy a schopnost spolecne resit chyby ci prekazky. Tento driver ukazuje, nakolik zamestnanci zazivaji bezpecne a podporujici pracovni prostredi.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Ja a vedouci</div>
+<div class="drv3-item-text">Srozumitelnost zadani, kvalita zpetne vazby a kazdodenni podpora od primeho nadrizeneho. Sledujeme, zda vedouci pomaha vytvaret podminky pro kvalitni praci i dlouhodobou motivaci.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Rozvoj a rust</div>
+<div class="drv3-item-text">Moznosti ucit se nove veci, posouvat se profesne a videt ve firme dalsi perspektivu. Prave pocit rozvoje casto rozhoduje o tom, zda si zamestnanec s firmou dokaze spojit i svou budoucnost.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Nastroje a podminky</div>
+<div class="drv3-item-text">To, zda maji lide k dispozici funkcni procesy, vybaveni a podminky pro dobrou praci. Pokud tato oblast nefunguje, negativne ovlivnuje nejen vykon, ale i celkovy pracovni zazitek zamestnancu.</div>
+</div>
+</div>
+</div>
+
+<!----------- Prezentace driveru ------------------->
+
+<div class="slide drivers-present-v3">
+<div class="dpv3-title"><span class="accent-teal">Prezentace</span> driveru</div>
+<div class="dpv3-intro">
+Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souhrnu az po podrobne analyzy.</strong>
+</div>
+<div class="dpv3-top">
+<div class="dpv3-text">
+<span class="accent-teal"><strong>Prvni dve urovne</strong></span> <strong>(Obecny souhrn)</strong> se zameruji na odpovedi agregovane do sirsich kategorii (skvely, prumerny, slaby vysledek). Agregovane odpovedi nejprve porovnavame s externimi benchmarky a pote zmapujeme situaci uvnitr firmy.
+</div>
+<div class="dpv3-text">
+<span class="accent-teal"><strong>Dalsi dve urovne</strong></span> <strong>(Podrobne analyzy)</strong> se zameruji na detailni rozlozeni odpovedi. Na treti urovni uvidite procentualni podil odpovedi na kazdou otazku - od "Urcite ano" po "Urcite ne" - na urovni cele firmy. Ctvrta uroven pak ukaze, jak se odpovedi rozdeluji mezi jednotlive organizacni jednotky. S kazdym krokem ziskate hlubsi prehled o deni ve firme.
+</div>
+</div>
+<div class="dpv3-divider">
+<div class="dpv3-left-title">Obecny souhrn</div>
+<div class="dpv3-right-title">Podrobne analyzy</div>
+</div>
+<div class="dpv3-bottom">
+<div class="dpv3-block dpv3-block-left">
+<div class="dpv3-label">Agregace:</div>
+<div class="dpv3-copy"><strong>Skvely vysledek</strong> = Urcite ano a Spise ano,<br><strong>Prumerny vysledek</strong> = Nemohu se rozhodnout,<br><strong>Slaby vysledek</strong> = Urcite ne, Spise ne</div>
+</div>
+<div class="dpv3-block dpv3-block-right">
+<div class="dpv3-label">Agregace:</div>
+<div class="dpv3-copy">Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne</div>
+</div>
+</div>
+<div class="dpv3-steps">
+<div class="dpv3-step"><div class="dpv3-step-num">1.</div><div class="dpv3-step-text">Srovnani s benchmarky</div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">2.</div><div class="dpv3-step-text">Drivery za firmu</div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">3.</div><div class="dpv3-step-text">Detail otazek</div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">4.</div><div class="dpv3-step-text">Drivery v detailu za organizacni jednotku</div></div>
 </div>
 </div>
 
@@ -2146,10 +2213,10 @@ dept_driver_df <- tibble(
 <div class="drvco-kicker">Vysledky</div>
 <div class="drvco-head">
 <div class="drvco-title">Drivery za firmu</div>
-<div class="drvco-subheads">
-<div>Top 3</div>
-<div>Bottom 3</div>
 </div>
+<div class="drvco-subheads-row">
+<div class="drvco-left-subhead">Top 3</div>
+<div class="drvco-right-subhead">Bottom 3</div>
 </div>
 <div class="drvco-grid">
 <div class="drvco-col">

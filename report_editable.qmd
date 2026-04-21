@@ -839,7 +839,7 @@ Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem
 dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum
 dit amet podnadpis
 </p>
-<div class="ef-brace"></div>
+<div class="ef-brace"><img src="visuals/brace.svg" alt="" class="ef-brace-img"></div>
 </div>
 <div class="ef-text-block">
 <p>
@@ -847,30 +847,39 @@ Lorem ipsum dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis. Lorem
 dolor sit amet dolor sit amet podnadpis Lorem ipsum dolor sit amet podnadpis Lorem ipsum dit
 amet podnadpis
 </p>
-<div class="ef-brace"></div>
+<div class="ef-brace"><img src="visuals/brace.svg" alt="" class="ef-brace-img"></div>
 </div>
 </div>
 <div class="ef-right">
-<div class="ef-question-list">
-<div class="ef-question-group">
-<div class="ef-question-title">Jsem hrdy</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
-<div class="ef-question-group">
-<div class="ef-question-title">Jsem hrdy</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
-<div class="ef-question-group">
-<div class="ef-question-title">Bavi me to</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
-</div>
-<div class="ef-question-group">
-<div class="ef-question-title">Smysl</div>
-<div class="ef-row"><div class="ef-row-label">Minuly rok</div><div class="ef-bar"><div class="ef-bar-seg pink-soft">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal-soft">15 %</div></div></div>
-<div class="ef-row"><div class="ef-row-label">Aktualni rok</div><div class="ef-bar"><div class="ef-bar-seg pink-strong">10 %</div><div class="ef-bar-seg grey">100 %</div><div class="ef-bar-seg teal">15 %</div></div></div>
+<div class="ef-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 7.1
+#| fig-height: 4.2
+
+mock_eng_questions_long <- mock_eng_questions |>
+  tidyr::pivot_longer(-area, names_to = "response", values_to = "pct") |>
+  mutate(response = factor(response, levels = names(mock_scale_cols)))
+
+ggplot(mock_eng_questions_long, aes(x = pct, y = area, fill = response)) +
+  geom_col(width = 0.6, position = "stack") +
+  scale_fill_manual(values = mock_scale_cols) +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 100)) +
+  theme_minimal(base_family = "Europa") +
+  theme(
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 13, face = "bold"),
+    legend.position = "none",
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.background = element_rect(fill = "transparent", color = NA),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0),
+    axis.ticks = element_blank()
+  )
+```
 </div>
 </div>
 </div>
@@ -1583,10 +1592,10 @@ dept_driver_df <- tibble(
 <div class="slide driver-company-v2">
 <div class="drvco-kicker">Vysledky</div>
 <div class="drvco-head">
-<div class="drvco-head-main">
 <div class="drvco-title">Drivery za firmu</div>
-<div class="drvco-left-subhead">Top 3</div>
 </div>
+<div class="drvco-subheads-row">
+<div class="drvco-left-subhead">Top 3</div>
 <div class="drvco-right-subhead">Bottom 3</div>
 </div>
 <div class="drvco-grid">

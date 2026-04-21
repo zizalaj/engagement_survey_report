@@ -1,9 +1,4 @@
 ---
-params:
-  form_id: "P1j6rq1O"
-  celkem_zamestnancu: null
-  oddeleni_manual: null
-  token_path: "token.txt"
 format:
   html:
     pagedjs: true
@@ -19,6 +14,9 @@ format:
       bleed: 0
       marks: none
 output-file: report_test.html
+params:
+  pruzkum: "OWy7TRYi"
+  benchmarky: "m4MXWOXz"
 ---
 
 <!---------- Úvodní slide ---------->
@@ -77,17 +75,14 @@ font_add("Europa", regular = here("fonts", "EuropaGroNr2JU Regular.otf"),
          bold = here("fonts", "EuropaGroNr2JU Bold.ttf"))
 showtext_auto()
 
-source(
-  here("codex", "navratnost-editor", "R", "typeform_helpers.R"),
-  local = knitr::knit_global()
-)
-
-token_path <- params$token_path %||% "token.txt"
+token_path <- "token.txt"
 
 
 ##############načtení dat api
 
-tf_token <- read_typeform_token(token_path)
+if (!file.exists(token_path)) stop("Token file not found.")
+tf_token <- trimws(readLines(token_path, warn = FALSE)[1])
+if (nchar(tf_token) == 0) stop("Token file is empty.")
 
 
 tf_get <- function(page,page_size){
@@ -106,7 +101,7 @@ tf_get <- function(page,page_size){
 forms <- tf_get(1,100)
 
 
-form <- params$form_id %||% "P1j6rq1O"
+form <- params$pruzkum
 
 
 get_form_definition <- function(tf_token, form_id) {
@@ -321,9 +316,16 @@ ciselnik_list <- process_survey_ciselnik(def)
 
 ciselnik_df <- dplyr::bind_rows(ciselnik_list)
 
+### funkce na standardizování textu
+
+clean_text <- function(x) {
+  stringr::str_squish(stringr::str_trim(x))
+}
+
 
 final_long_df <- survey_df_long %>%
-  left_join(ciselnik_df, by = "otazka_ref")
+  left_join(ciselnik_df, by = "otazka_ref")%>%
+  mutate(otazka_title = clean_text(otazka_title))
 
 
 
@@ -354,8 +356,6 @@ include_multiple_choice <- function(df){
   
 }
 
-mc_present <- include_multiple_choice(final_long_df)
-
 
 include_openended <- function(df){
   openend <- df %>%
@@ -370,6 +370,16 @@ include_openended <- function(df){
   }
 }
 
+include_horsi <- function(df){
+  if(any(df$pod_benchmarkem)){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+mc_present <- include_multiple_choice(final_long_df)
 
 openend_present <- include_openended(final_long_df)
 
@@ -435,22 +445,6 @@ odd_souhrn_long$oddeleni_trunc <- str_trunc(odd_souhrn_long$odpoved_hodnota,
 
 
 #### věk
-
-return_rate_inputs <- extract_return_rate_inputs(
-  final_long_df,
-  celkem_zamestnancu = params$celkem_zamestnancu,
-  oddeleni_manual = params$oddeleni_manual
-)
-
-zakl_info <- return_rate_inputs$zakl_info
-zakl_info_otazky <- return_rate_inputs$zakl_info_otazky
-oddeleni_ot <- return_rate_inputs$oddeleni_ot
-oddeleni <- return_rate_inputs$oddeleni
-odd_souhrn_long <- return_rate_inputs$odd_souhrn_long
-avg_doba_vyplneni <- return_rate_inputs$avg_doba_vyplneni
-pocet_resp <- return_rate_inputs$pocet_resp
-navratnost <- return_rate_inputs$navratnost
-celkem_zamestnancu <- params$celkem_zamestnancu %||% NA_real_
 
 vek_souhrn <- final_long_df %>%
   filter(group_title == "Základní info" & typ_otazky == "number") %>%
@@ -622,6 +616,68 @@ driver_list <- Map(function(driver,question){
 },driver_split,question_split)
 
 
+####### porovnání s benchmarky
+
+##### načtení benchmarků
+
+bench_form <- params$benchmarky
+
+bench_def <- get_form_definition(tf_token,bench_form)
+
+bench_responses <- get_responses_page(tf_token,bench_form)
+
+bench_all_responses <- get_all_responses(tf_token,bench_form)
+
+bench_data_preprocessed <- preprocess_data(bench_all_responses)
+
+bench_df_long <- dplyr::bind_rows(unlist(bench_data_preprocessed, recursive = FALSE))
+
+bench_ciselnik_list <- process_survey_ciselnik(bench_def)
+
+bench_ciselnik_df <- dplyr::bind_rows(bench_ciselnik_list)
+
+
+bench_df_complete <- bench_df_long %>%
+  left_join(bench_ciselnik_df, by = "otazka_ref")%>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         otazka_title = clean_text(otazka_title))
+
+
+### aktuální výsledky vs benchmarky
+
+#drivery_clean <- drivery_otazky %>%
+#  mutate(otazka_title = str_squish(str_trim(otazka_title)))
+
+#bench_clean <- bench_df_complete %>%
+#  mutate(otazka_title = str_squish(str_trim(otazka_title)))
+
+drivery_benchmark <- drivery_otazky %>%
+  dplyr::select(otazka_title,odpoved_kat,pct)%>%
+  left_join(
+    bench_df_complete %>% select(otazka_title,odpoved_hodnota),
+    by = "otazka_title"
+  ) %>%
+  filter(odpoved_kat == "Skvělý výsledek")%>%
+  mutate(pod_benchmarkem = case_when(
+    odpoved_hodnota == NA ~ NA,
+    pct < odpoved_hodnota ~ TRUE,
+    pct >= odpoved_hodnota ~ FALSE
+  ))
+
+
+include_horsi <- function(df){
+  if(any(df$pod_benchmarkem, na.rm = T)){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+horsi_vysledky_present <- include_horsi(drivery_benchmark)
+
+
+
 
 
 ```
@@ -721,6 +777,125 @@ cat(progress_rectangles(agenda_progress_filled, agenda_progress_total))
 </div>
 
 
+<!----------- Co nás dnes čeká --------------------------------------->
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(stringr)
+
+# Example input booleans
+# mc_present <- TRUE
+# openend_present <- TRUE
+# horsi_vysledky_present <- FALSE
+
+agenda_vector <- c(horsi_vysledky_present, mc_present, openend_present)
+
+build_agenda <- function(x) {
+  
+  base_sections <- c(
+    "Průzkum v číslech",
+    "Výsledky engagementu",
+    "Výsledky jednotlivých driverů"
+  )
+  
+  optional_sections <- c()
+  
+  if (x[1]) {
+    optional_sections <- c(optional_sections, "Otázky, které dopadly hůře")
+  }
+  
+  if (x[2]) {
+    optional_sections <- c(optional_sections, "Multiple choice otázky")
+  }
+  
+  if (x[3]) {
+    optional_sections <- c(optional_sections, "Otevřené otázky")
+  }
+  
+  final_section <- "Závěrečná shrnutí a doporučení"
+  
+  sections <- c(base_sections, optional_sections, final_section)
+  
+  list(
+    sections = sections,
+    total_sections = length(sections),
+    progress_total = length(sections) + 1
+  )
+}
+
+make_agenda_items <- function(sections) {
+  items <- character(length(sections))
+  
+  for (i in seq_along(sections)) {
+    items[i] <- sprintf(
+      paste0(
+        '<li class="agenda-item">',
+        '<span class="agenda-num">%02d</span>',
+        '<span class="agenda-text">%s</span>',
+        '</li>'
+      ),
+      i,
+      sections[i]
+    )
+  }
+  
+  paste(items, collapse = "\n")
+}
+
+progress_rectangles <- function(filled_rectangles, total_rectangles) {
+  total_rectangles <- as.integer(total_rectangles)
+  filled_rectangles <- as.integer(filled_rectangles)
+
+  rectangles <- rep('<span class="ghost"></span>', total_rectangles)
+
+  if (filled_rectangles > 0) {
+    rectangles[seq_len(min(filled_rectangles, total_rectangles))] <- '<span class="on"></span>'
+  }
+
+  paste(rectangles, collapse = "\n")
+}
+
+agenda_cfg <- build_agenda(agenda_vector)
+
+agenda_progress_total <- agenda_cfg$progress_total
+agenda_progress_filled <- 0
+
+get_progress <- function(agenda_cfg, section_name) {
+  pos <- match(section_name, agenda_cfg$sections)
+  list(
+    filled = pos,
+    total = agenda_cfg$progress_total
+  )
+}
+```
+
+<div class="slide agenda-slide"> 
+<div class="agenda-content"> 
+<div class="agenda-title">Co nás dnes čeká</div> 
+<ul class="agenda-list">
+
+```{r} 
+#| echo: false 
+#| results: asis
+
+cat(make_agenda_items(agenda_cfg$sections))
+```
+</ul>
+
+<div class="scv-progress">
+```{r}
+#| echo: false
+#| results: asis
+
+cat(progress_rectangles(agenda_progress_filled, agenda_progress_total))
+```
+</div>
+
+</div>
+</div>
 
 
 <!---- Průzkum v číslech sekce ----->
@@ -742,7 +917,9 @@ za jednotlivé organizační jednotky nebo podle demografických údajů.
 #| echo: false
 #| results: asis
 
-cat(progress_rectangles(section01_progress_filled, section01_progress_total))
+pvc_progress <- get_progress(agenda_cfg, "Průzkum v číslech")
+
+cat(progress_rectangles(pvc_progress$filled, pvc_progress$total))
 ```
 </div>
 
@@ -979,7 +1156,9 @@ Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdí
 #| echo: false
 #| results: asis
 
-cat(progress_rectangles(section02_progress_filled, section02_progress_total))
+eng_progress <- get_progress(agenda_cfg, "Výsledky engagementu")
+
+cat(progress_rectangles(eng_progress$filled, eng_progress$total))
 ```
 </div>
 
@@ -1545,7 +1724,9 @@ Nasledujici slidy ukazuji, jak drivery cist a jak vypadaji hlavni vysledky na ur
 #| echo: false
 #| results: asis
 
-cat(progress_rectangles(section03_progress_filled, section03_progress_total))
+dri_progress <- get_progress(agenda_cfg, "Výsledky jednotlivých driverů")
+
+cat(progress_rectangles(dri_progress$filled, dri_progress$total))
 ```
 </div>
 </div>
@@ -2251,6 +2432,10 @@ plot_multiple_choice <- function(show_title = FALSE) {
 }
 ```
 
+
+
+<!-------- Otázky, které dopadly hůře ----------------------->
+
 <div class="slide section-cover-v2">
 <div class="scv-badge">04</div>
 <div class="scv-title">Problematicke otazky</div>
@@ -2260,7 +2445,11 @@ plot_multiple_choice <- function(show_title = FALSE) {
 #| echo: false
 #| results: asis
 
-cat(progress_rectangles(problematic_progress_filled, problematic_progress_total))
+prob_progress <- get_progress(agenda_cfg, "Otázky, které dopadly hůře")
+
+#cat(progress_rectangles(prob_progress$filled, prob_progress$total))
+cat(progress_rectangles(4,6))
+
 ```
 </div>
 </div>
@@ -2300,6 +2489,8 @@ plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03"))
 
 plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03", "Oddeleni 04", "Oddeleni 05"))
 ```
+
+
 </div>
 <div class="pbv-legend">
 <div class="pbv-legend-label">Skala odpovedi</div>
@@ -2309,6 +2500,9 @@ plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03", "Oddel
 </div>
 </div>
 
+
+
+<!----------- Multiple choice otázky ------------------------>
 <div class="slide section-cover-v2">
 <div class="scv-badge">05</div>
 <div class="scv-title">Multiple choice otazky</div>
