@@ -508,14 +508,18 @@ doba_souhrn <- zakl_info %>%
 
 engagement_index_celkem <- final_long_df %>%
   filter(group_title == "Engagement") %>%
+  group_by(respondent_id,odpoved_hodnota)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),
+            .groups = "drop")%>%
   mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
          uroven_engagementu = as.factor(case_when(
-           odpoved_hodnota <= 2 ~ "Úplný engagement",
-           odpoved_hodnota == 3 ~ "Částečný engagement",
+           odpoved_hodnota < 2 ~ "Úplný engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "Částečný engagement",
            odpoved_hodnota > 3 ~ "Slabý engagement"
          ))
          ) %>%
-  group_by(uroven_engagementu) %>%
+  ungroup()%>%
+  group_by(uroven_engagementu)%>%
   summarise(n = n()) %>%
   mutate(pct = round((n/sum(n))*100,1))
 
@@ -539,12 +543,16 @@ eng_otazky <- ciselnik_df %>%
 
 engagement_index_otazky <- final_long_df %>%
   filter(group_title == "Engagement") %>%
+  group_by(respondent_id,odpoved_hodnota,otazka_title)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),
+            .groups="drop")%>%
   mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
          uroven_engagementu = as.factor(case_when(
-           odpoved_hodnota <= 2 ~ "Úplný engagement",
-           odpoved_hodnota == 3 ~ "Částečný engagement",
+           odpoved_hodnota < 2 ~ "Úplný engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "Částečný engagement",
            odpoved_hodnota > 3 ~ "Slabý engagement"
          ))) %>%
+  ungroup()%>%
   group_by(uroven_engagementu,otazka_title) %>%
   summarise(n = n()) %>%
   group_by(otazka_title) %>%
@@ -558,11 +566,158 @@ eng_order <- c("Úplný engagement","Částečný engagement","Slabý engagement
 engagement_index_otazky$uroven_engagementu <- factor(engagement_index_otazky$uroven_engagementu,
                             levels = rev(eng_order))
 
+###### engagement index podle oddělení
+
+odd_responses <- final_long_df %>%
+  filter(otazka_title == oddeleni_ot)%>%
+  dplyr::select(respondent_id,odpoved_hodnota)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  rename(oddeleni = odpoved_hodnota)
+
+
+
+eng_index_odd <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  group_by(respondent_id,odpoved_hodnota)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),
+            .groups = "drop")%>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         uroven_engagementu = as.factor(case_when(
+           odpoved_hodnota < 2 ~ "Úplný engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "Částečný engagement",
+           odpoved_hodnota > 3 ~ "Slabý engagement"
+         ))) %>%
+  left_join(odd_responses,by = "respondent_id")%>%
+  ungroup()%>%
+  group_by(oddeleni,uroven_engagementu) %>%
+  count(uroven_engagementu, name="n") %>%
+  group_by(oddeleni)%>%
+  mutate(pct = round((n/sum(n))*100,1)) %>%
+  ungroup()
+
+eng_index_odd$uroven_engagementu <- factor(eng_index_odd$uroven_engagementu,
+                            levels = rev(eng_order))
+
+split_depts <- function(df){
+  
+  odd <- unique(df$oddeleni)
+  nr_dept <- length(odd)
+  ratio <- nr_dept/10
+  mod <- nr_dept%%10
+  df_list <- list()
+  
+  
+  if(mod==0){
+    nr_slides <- ratio
+    iterable <- seq(1,nr_slides,1)
+    
+    for(i in iterable){
+      ind <- i*10
+      odd_i <- na.omit(odd[(ind-9):ind])
+      d <- df%>%filter(oddeleni %in% odd_i)
+      
+      df_list[[i]] <- d
+    }
+  }
+  else{
+    nr_slides <- ratio+1
+    iterable <- seq(1,nr_slides,1)
+    
+    for(i in iterable){
+      ind <- i*10
+      odd_i <- na.omit(odd[(ind-9):ind])
+      d <- df%>%filter(oddeleni %in% odd_i)
+      
+      df_list[[i]] <- d
+    }
+  }
+  return(df_list)
+}
+
+eng_odd_list <- split_depts(eng_index_odd)
+
+eng_odd_pages <- length(eng_odd_list)
+
+render_eng_odd_slides <- function(df_list, total_pages) {
+  if (length(df_list) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide eio-v2">',
+    '<div class="eio-header">',
+    '<p class="eio-kicker">Vysledky</p>',
+    '<h1 class="eio-title">Srovnani <span class="accent-teal">engagementu indexu</span> napric oddelenimi</h1>',
+    '</div>',
+    '<div class="eio-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 13.4',
+    '#| fig-height: 7.5',
+    '#| fig-align: center',
+    '',
+    'df_page <- df_list[[{{i}}]]',
+    '',
+    'ggplot(df_page, aes(x = oddeleni, y = pct, fill = uroven_engagementu)) +',
+    '  geom_col(position = position_stack(), width = 0.62) +',
+    '  geom_text(',
+    '    aes(label = paste0(pct, "%")),',
+    '    position = position_stack(vjust = 0.5),',
+    '    family = "Europa",',
+    '    fontface = "bold",',
+    '    size = 6.2',
+    '  ) +',
+    '  scale_fill_manual(values = colors_eng) +',
+    '  theme_minimal(base_family = "Europa") +',
+    '  theme(',
+    '    panel.grid = element_blank(),',
+    '    panel.background = element_rect(fill = "transparent", colour = NA),',
+    '    plot.background = element_rect(fill = "transparent", colour = NA),',
+    '    axis.text.x = element_text(family = "Europa", face = "bold", size = 20, angle = 45),',
+    '    axis.text.y = element_blank(),',
+    '    axis.ticks = element_blank(),',
+    '    axis.title.x = element_blank(),',
+    '    axis.title.y = element_blank(),',
+    '    legend.position = "none",',
+    '    plot.margin = margin(t = 10, r = 86, b = 0, l = 10)',
+    '  )',
+    '```',
+    '</div>',
+    '{{arrow_html}}',
+    '<div class="eio-legend"><div class="eio-legend-label">Skala odpovedi</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Fully engaged</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Partially engaged</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Disengaged</div></div></div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(df_list), function(i) {
+    arrow_html <- if (i < total_pages) {
+      '<div class="eio-next">&gt;&gt;</div>'
+    } else {
+      ""
+    }
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      arrow_html = arrow_html
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
 
 ##### individuální míra engagementu
 ind_engagement <- final_long_df %>%
   filter(group_title == "Engagement") %>%
-  group_by(respondent_id) %>%
+  group_by(respondent_id,odpoved_hodnota) %>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),
+            .groups="drop")%>%
+  group_by(respondent_id)%>%
   mutate(
     odpoved_hodnota = as.numeric(odpoved_hodnota),
     prum_eng = mean(odpoved_hodnota),
@@ -571,7 +726,7 @@ ind_engagement <- final_long_df %>%
       prum_eng > 1.2 & prum_eng <= 2.5 ~ "Potential",
       prum_eng > 2.5 ~ "Disengaged"
     )) %>%
-  ungroup() %>%
+  ungroup()%>%
   distinct(respondent_id,ind_mira) %>%
   group_by(ind_mira) %>%
   summarise(n = n()) %>%
@@ -583,6 +738,106 @@ potential <- ind_engagement%>%filter(ind_mira == "Potential")%>%pull(pct)
 potential <- ifelse(length(potential)>0,potential,0)
 disengaged <- ind_engagement%>%filter(ind_mira == "Disengaged")%>%pull(pct)
 disengaged <- ifelse(length(disengaged)>0,disengaged,0)
+
+
+##### individuální míra engagementu po odděleních
+
+ind_eng_odd <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  group_by(respondent_id,odpoved_hodnota) %>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  group_by(respondent_id)%>%
+  mutate(
+    odpoved_hodnota = as.numeric(odpoved_hodnota),
+    prum_eng = mean(odpoved_hodnota),
+    ind_mira = case_when(
+      prum_eng <= 1.2 ~ "Engaged",
+      prum_eng > 1.2 & prum_eng <= 2.5 ~ "Potential",
+      prum_eng > 2.5 ~ "Disengaged"
+    )) %>%
+  left_join(odd_responses,by="respondent_id")%>%
+  ungroup() %>%
+  distinct(respondent_id,ind_mira,oddeleni)%>%
+  group_by(oddeleni,ind_mira) %>%
+  count(ind_mira,name="n") %>%
+  group_by(oddeleni)%>%
+  mutate(pct = round((n/sum(n))*100,1))
+
+ind_odd_list <- split_depts(ind_eng_odd)
+
+ind_odd_pages = length(ind_odd_list)
+
+render_ind_odd_slides <- function(df_list, total_pages) {
+  if (length(df_list) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide eio-v2">',
+    '<div class="eio-header">',
+    '<p class="eio-kicker">Vysledky</p>',
+    '<h1 class="eio-title">Srovnani <span class="accent-teal">individualni miry engagementu</span> napric oddelenimi</h1>',
+    '</div>',
+    '<div class="eio-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 13.4',
+    '#| fig-height: 7.5',
+    '#| fig-align: center',
+    '',
+    'df_page <- df_list[[{{i}}]]',
+    '',
+    'ggplot(df_page, aes(x = oddeleni, y = pct, fill = ind_mira)) +',
+    '  geom_col(position = position_stack(), width = 0.62) +',
+    '  geom_text(',
+    '    aes(label = paste0(pct, "%")),',
+    '    position = position_stack(vjust = 0.5),',
+    '    family = "Europa",',
+    '    fontface = "bold",',
+    '    size = 6.2',
+    '  ) +',
+    '  scale_fill_manual(values = colors_ind_mira) +',
+    '  theme_minimal(base_family = "Europa") +',
+    '  theme(',
+    '    panel.grid = element_blank(),',
+    '    panel.background = element_rect(fill = "transparent", colour = NA),',
+    '    plot.background = element_rect(fill = "transparent", colour = NA),',
+    '    axis.text.x = element_text(family = "Europa", face = "bold", size = 20, angle = 45),',
+    '    axis.text.y = element_blank(),',
+    '    axis.ticks = element_blank(),',
+    '    axis.title.x = element_blank(),',
+    '    axis.title.y = element_blank(),',
+    '    legend.position = "none",',
+    '    plot.margin = margin(t = 10, r = 86, b = 0, l = 10)',
+    '  )',
+    '```',
+    '</div>',
+    '{{arrow_html}}',
+    '<div class="eio-legend"><div class="eio-legend-label">Skala odpovedi</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Fully engaged</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Partially engaged</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Disengaged</div></div></div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(df_list), function(i) {
+    arrow_html <- if (i < total_pages) {
+      '<div class="eio-next">&gt;&gt;</div>'
+    } else {
+      ""
+    }
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      arrow_html = arrow_html
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
 
 ###############################################################################
 ############# drivery 
@@ -730,6 +985,100 @@ include_horsi <- function(df){
 
 horsi_vysledky_present <- include_horsi(drivery_benchmark)
 
+driver_benchmark_columns <- c("Firma", "Česká republika", "USA", "Německo")
+
+build_driver_benchmark_placeholder_table <- function(driver_results, column_config) {
+  base_table <- driver_results %>%
+    filter(odpoved_kat == "Skvělý výsledek") %>%
+    distinct(group_title, pct, poradi) %>%
+    arrange(poradi) %>%
+    transmute(
+      driver_name = group_title,
+      Firma = round(pct)
+    )
+
+  benchmark_columns <- setdiff(column_config, "Firma")
+
+  for (col_name in benchmark_columns) {
+    base_table[[col_name]] <- pmax(
+      35,
+      pmin(
+        95,
+        round(base_table$Firma + ((seq_len(nrow(base_table)) %% 4) - 1.5) * 4 - 3)
+      )
+    )
+  }
+
+  base_table
+}
+
+render_driver_benchmark_results <- function(table_df, column_config) {
+  if (nrow(table_df) == 0) {
+    return(invisible(NULL))
+  }
+
+  visible_columns <- intersect(column_config, names(table_df))
+  value_columns <- setdiff(visible_columns, "driver_name")
+
+  header_html <- paste0(
+    '<div class="dbr-row dbr-row-head">',
+    '<div></div>',
+    paste(
+      vapply(value_columns, function(col_name) {
+        paste0(
+          '<div class="dbr-head-cell',
+          if (identical(col_name, "Firma")) ' accent' else '',
+          '"><span class="angled">', htmltools::htmlEscape(col_name), '</span></div>'
+        )
+      }, character(1)),
+      collapse = ""
+    ),
+    '</div>'
+  )
+
+  body_html <- paste(
+    vapply(seq_len(nrow(table_df)), function(i) {
+      row_df <- table_df[i, , drop = FALSE]
+      paste0(
+        '<div class="dbr-row">',
+        '<div class="dbr-label">', htmltools::htmlEscape(row_df$driver_name[[1]]), '</div>',
+        paste(
+          vapply(value_columns, function(col_name) {
+            value <- row_df[[col_name]][[1]]
+            paste0(
+              '<div class="dbr-cell',
+              if (identical(col_name, "Firma")) ' accent' else '',
+              '">',
+              htmltools::htmlEscape(paste0(value, ' %')),
+              '</div>'
+            )
+          }, character(1)),
+          collapse = ""
+        ),
+        '</div>'
+      )
+    }, character(1)),
+    collapse = "\n"
+  )
+
+  slide_html <- paste0(
+    '<div class="slide driver-bench-results-v2">',
+    '<div class="dbr-kicker">Vysledky</div>',
+    '<div class="dbr-title">Srovnani <span class="accent-teal">driveru</span> s relevantnimi benchmarky</div>',
+    '<div class="dbr-table" style="--dbr-col-count:', length(value_columns), ';">',
+    header_html,
+    body_html,
+    '</div>',
+    '</div>'
+  )
+
+  cat(slide_html)
+}
+
+driver_benchmark_results_table <- build_driver_benchmark_placeholder_table(
+  drivery_overview_complete,
+  driver_benchmark_columns
+)
 
 
 
@@ -1437,7 +1786,7 @@ Lorem ipsum dit amet podnadpis
 <p class="ef-kicker">Vysledky</p>
 <h1 class="ef-title">Engagement index <span class="accent-teal">za firmu</span></h1>
 </div>
-<div class="ef-right-head" style="padding-top: 34px;">Engagement se meril nasledujicimi otazkami:</div>
+<div class="ef-right-head" style="padding-top: 64px;">Engagement se meril nasledujicimi otazkami:</div>
 </div>
 <div class="ef-main">
 <div class="ef-left">
@@ -1471,6 +1820,14 @@ amet podnadpis
 colors_eng <- c("Úplný engagement" = "#63E8C6", "Částečný engagement" = "#c5c5c5", 
             "Slabý engagement" = "#ff67aa")
 
+colors_ind_mira <- c("Engaged" = "#63E8C6", "Potential" = "#c5c5c5", 
+            "Disengaged" = "#ff67aa")
+
+
+labels_df <- engagement_index_otazky %>%
+  group_by(otazka_title) %>%
+  summarise(total = 50)
+
 ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_engagementu))+
   geom_col(position = position_stack(),width = 0.25)+
   geom_text(
@@ -1480,6 +1837,17 @@ ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_eng
       fontface = "bold",
       size = 12
     )+
+  geom_text(
+    data = labels_df,
+    aes(x = otazka_title, y = total, label = otazka_title),  # +2 = spacing
+    inherit.aes = FALSE,
+    #position = position_nudge(x=-.5),
+    hjust=.5,
+    vjust=-2,
+    family = "Europa",
+    fontface = "bold",
+    size = 12
+  )+
   scale_fill_manual(values = colors_eng)+
   guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
   theme(
@@ -1489,7 +1857,7 @@ ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_eng
     legend.background = element_rect(fill = "white", colour = NA),
     legend.box.background = element_rect(fill = "white", colour = NA),
     axis.text.x  = element_blank(),
-    axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
+    axis.text.y = element_blank(),#element_text(family = "Europa",face = "bold", size = 25),
     axis.ticks.x = element_blank(),
     axis.ticks.y = element_blank(),
     axis.title.x = element_blank(),
@@ -1508,9 +1876,9 @@ ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_eng
 <div class="ef-legend-label">Skala odpovedi</div>
 <div class="ef-legend-items">
 <div class="ef-legend-item"><i class="ef-swatch teal"></i>Urcite ano = skore 1</div>
-<div class="ef-legend-item"><i class="ef-swatch grey1"></i>Spise ano = skore 2</div>
+<div class="ef-legend-item"><i class="ef-swatch grey2"></i>Spise ano = skore 2</div>
 <div class="ef-legend-item"><i class="ef-swatch grey2"></i>Nemohu se rozhodnout = skore 3</div>
-<div class="ef-legend-item"><i class="ef-swatch pink"></i>Spise ne = skore 4</div>
+<div class="ef-legend-item"><i class="ef-swatch pinkStrong"></i>Spise ne = skore 4</div>
 <div class="ef-legend-item"><i class="ef-swatch pinkStrong"></i>Urcite ne = skore 5</div>
 </div>
 </div>
@@ -1548,167 +1916,29 @@ ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_eng
 </div>
 
 
-<!-- Engagement index oddeleni 1 -->
-<div class="slide engindex-oddeleni-slide">
-<div class="eio-header">
-<div class="section-title">Engagement index podle oddeleni</div>
-<div class="section-description">
-Detailni pohled pomaha odhalit tymy, ktere jsou vyrazne nadprumerne nebo naopak potrebují podporu.
-</div>
-</div>
+
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
-#| fig-width: 10.5
-#| fig-height: 4.6
+#| results: asis
 
-mock_departments_1_long <- mock_departments_1 |>
-  tidyr::pivot_longer(-dept, names_to = "response", values_to = "pct") |>
-  mutate(response = factor(response, levels = names(mock_scale_cols)))
-
-ggplot(mock_departments_1_long, aes(x = dept, y = pct, fill = response)) +
-  geom_col(width = 0.62) +
-  coord_flip() +
-  scale_fill_manual(values = mock_scale_cols) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
-  theme_minimal(base_family = "Europa") +
-  theme(
-    panel.grid = element_blank(),
-    axis.title = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_text(size = 15, face = "bold"),
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.background = element_rect(fill = "transparent", color = NA),
-    panel.background = element_rect(fill = "transparent", color = NA)
-  )
+render_eng_odd_slides(eng_odd_list, eng_odd_pages)
 ```
-</div>
 
 
-<!-- Engagement index oddeleni 2 -->
-<div class="slide engindex-oddeleni-slide">
-<div class="eio-header">
-<div class="section-title">Engagement index podle oddeleni</div>
-<div class="section-description">
-Srovnani napric oddelenimi ukazuje, kde se nejvice propisuje kvalita vedeni, smyslu prace nebo spoluprace.
-</div>
-</div>
+
+
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
-#| fig-width: 10.5
-#| fig-height: 4.6
+#| results: asis
 
-mock_departments_2_long <- mock_departments_2 |>
-  tidyr::pivot_longer(-dept, names_to = "response", values_to = "pct") |>
-  mutate(response = factor(response, levels = names(mock_scale_cols)))
-
-ggplot(mock_departments_2_long, aes(x = dept, y = pct, fill = response)) +
-  geom_col(width = 0.62) +
-  coord_flip() +
-  scale_fill_manual(values = mock_scale_cols) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
-  theme_minimal(base_family = "Europa") +
-  theme(
-    panel.grid = element_blank(),
-    axis.title = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_text(size = 15, face = "bold"),
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.background = element_rect(fill = "transparent", color = NA),
-    panel.background = element_rect(fill = "transparent", color = NA)
-  )
+render_ind_odd_slides(ind_odd_list, ind_odd_pages)
 ```
-</div>
 
 
-<!-- Engagement index oddeleni 3 -->
-<div class="slide engindex-oddeleni-slide">
-<div class="eio-header">
-<div class="section-title">Engagement index podle oddeleni</div>
-<div class="section-description">
-Na teto urovni uz lze dobre cist, ktere tymy stoji za hlubsi interpretaci v kontextu organizacnich zmen nebo managerske praxe.
-</div>
-</div>
-```{r}
-#| echo: false
-#| warning: false
-#| message: false
-#| fig-width: 10.5
-#| fig-height: 4.6
-
-mock_departments_3_long <- mock_departments_3 |>
-  tidyr::pivot_longer(-dept, names_to = "response", values_to = "pct") |>
-  mutate(response = factor(response, levels = names(mock_scale_cols)))
-
-ggplot(mock_departments_3_long, aes(x = dept, y = pct, fill = response)) +
-  geom_col(width = 0.62) +
-  coord_flip() +
-  scale_fill_manual(values = mock_scale_cols) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) +
-  theme_minimal(base_family = "Europa") +
-  theme(
-    panel.grid = element_blank(),
-    axis.title = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_text(size = 15, face = "bold"),
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.background = element_rect(fill = "transparent", color = NA),
-    panel.background = element_rect(fill = "transparent", color = NA)
-  )
-```
-</div>
-
-
-<!-- Department comparison v2 -->
-<div class="slide eio-v2">
-<div class="eio-header">
-<p class="eio-kicker">Vysledky</p>
-<h1 class="eio-title">Srovnani <span class="accent-teal">engagementu indexu</span> napric oddelenimi</h1>
-</div>
-<div class="eio-columns five">
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 01</div></div>
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 02</div></div>
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 03</div></div>
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 04</div></div>
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 05</div></div>
-</div>
-<div class="eio-next">&gt;&gt;</div>
-<div class="eio-legend"><div class="eio-legend-label">Skala odpovedi</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Fully engaged</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Partially engaged</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Disengaged</div></div></div>
-</div>
-
-<div class="slide eio-v2">
-<div class="eio-header">
-<p class="eio-kicker">Vysledky</p>
-<h1 class="eio-title">Srovnani <span class="accent-teal">engagementu indexu</span> napric oddelenimi</h1>
-</div>
-<div class="eio-columns three">
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 06</div></div>
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 07</div></div>
-<div class="eio-col"><div class="eio-col-head"><span>Minuly rok</span><span>Aktualni rok</span></div><div class="eio-pair"><div class="eio-bar old"><div class="seg pink-soft">10 %</div><div class="seg grey">100 %</div><div class="seg teal-soft">15 %</div></div><div class="eio-bar current"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div></div><div class="eio-label">Oddeleni 08</div></div>
-</div>
-<div class="eio-legend"><div class="eio-legend-label">Skala odpovedi</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Fully engaged</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Partially engaged</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Disengaged</div></div></div>
-</div>
-
-<div class="slide eio-v2">
-<div class="eio-header">
-<p class="eio-kicker">Vysledky</p>
-<h1 class="eio-title">Srovnani <span class="accent-teal">individualni miry engagementu</span> napric oddelenimi</h1>
-</div>
-<div class="eio-columns five singleyear">
-<div class="eio-col solo"><div class="eio-col-head center"><span>Aktualni rok</span></div><div class="eio-single"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div><div class="eio-label">Oddeleni 01</div></div>
-<div class="eio-col solo"><div class="eio-col-head center"><span>Aktualni rok</span></div><div class="eio-single"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div><div class="eio-label">Oddeleni 02</div></div>
-<div class="eio-col solo"><div class="eio-col-head center"><span>Aktualni rok</span></div><div class="eio-single"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div><div class="eio-label">Oddeleni 03</div></div>
-<div class="eio-col solo"><div class="eio-col-head center"><span>Aktualni rok</span></div><div class="eio-single"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div><div class="eio-label">Oddeleni 04</div></div>
-<div class="eio-col solo"><div class="eio-col-head center"><span>Aktualni rok</span></div><div class="eio-single"><div class="seg pink-strong">10 %</div><div class="seg grey-dark">100 %</div><div class="seg teal">15 %</div></div><div class="eio-label">Oddeleni 05</div></div>
-</div>
-<div class="eio-legend"><div class="eio-legend-label">Skala odpovedi</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Fully engaged</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Partially engaged</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Disengaged</div></div></div>
-</div>
 
 <!-- Drivery engagementu oddelovac sekce -->
 <div class="slide section-slide">
@@ -1798,6 +2028,8 @@ Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souh
 </div>
 </div>
 
+<!----- Jak číst Drivery ve srovnání s benchmarky ------------>
+
 <div class="slide driver-bench-v2">
 <div class="jakcist-header">
 <div class="jakcist-header-left">
@@ -1821,6 +2053,7 @@ Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souh
 </div>
 </div>
 
+<!---- Jak číst drivery za firmu ----------->
 <div class="slide driver-firma-v2">
 <div class="jakcist-header">
 <div class="jakcist-header-left">
@@ -1862,6 +2095,8 @@ Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souh
 </div>
 </div>
 
+
+<!---- Jak číst detail otázky ----->
 <div class="slide driver-detail-v2">
 <div class="jakcist-header">
 <div class="jakcist-header-left">
@@ -1902,171 +2137,9 @@ Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souh
 </div>
 </div>
 
-<!-- Driver intro v2 -->
-<div class="slide drivers-list-v2">
-<div class="drv-title">Merene/sledovane <span class="accent-teal">drivery</span></div>
-<div class="drv-lead">
-Diky neustalemu sledovani trendu v oblasti engagementu a analyze nasich
-dat jsme vybrali moduly, ktere jsou podle nas nejvyznamnejsimi drivery
-engagementu. Pojdme si je ted podrobneji predstavit
-</div>
-<div class="drv-grid">
-<div class="drv-item"><div class="drv-item-title">Ja a firma</div><div class="drv-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div></div>
-<div class="drv-item"><div class="drv-item-title">Ja a firma</div><div class="drv-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div></div>
-<div class="drv-item"><div class="drv-item-title">Ja a firma</div><div class="drv-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div></div>
-<div class="drv-item"><div class="drv-item-title">Ja a firma</div><div class="drv-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div></div>
-<div class="drv-item"><div class="drv-item-title">Ja a firma</div><div class="drv-item-text">Znalost toho, kam firma jde, jakou ma za sebou historii a co od ni tim padem mohu cekat. Bez dobre znalosti toho, jaky je firemni vyvoj, se zamestnanec nemuze s firmou spojit a nemuze byt hrdy na to, ze je jeji soucasti. Dale se zamerujeme na znalost firemnich cilu, abychom znali povedomi zamestnancu o budoucim firemnim smerovani.</div></div>
-</div>
-</div>
-
-<div class="slide drivers-present-v2">
-<div class="dpv-title"><span class="accent-teal">Prezentace</span> driveru</div>
-<div class="dpv-top">
-<div class="dpv-text">
-Data z modulu prezentujeme na ctyrech urovnich detailu, od <strong>obecnych souhrnu az po podrobne analyzy.</strong>
-</div>
-<div class="dpv-text">
-<span class="accent-teal"><strong>Prvni dve urovne</strong></span> <strong>(Obecny souhrn)</strong> se zameruji na odpovedi agregovane do sirsich kategorii (skvely, prumerny, slaby vysledek). Agregovane odpovedi nejprve porovnavame s externimi benchmarky a pote zmapujeme situaci uvnitr firmy.
-</div>
-<div class="dpv-text">
-<span class="accent-teal"><strong>Dalsi dve urovne</strong></span> <strong>(Podrobne analyzy)</strong> se zameruji na detailni rozlozeni odpovedi. Na treti urovni uvidite procentualni podil odpovedi na kazdou otazku - od „Urcite ano“ po „Urcite ne“ - na urovni cele firmy. Ctvrta uroven pak ukaze, jak se odpovedi rozdeluji mezi jednotlive organizacni jednotky. S kazdym krokem ziskate hlubsi prehled o deni ve firme.
-</div>
-</div>
-<div class="dpv-divider">
-<div class="dpv-left-title">Obecny souhrn</div>
-<div class="dpv-right-title">Podrobne analyzy</div>
-</div>
-<div class="dpv-bottom">
-<div class="dpv-block left">
-<div class="dpv-label">Agregace:</div>
-<div class="dpv-copy"><strong>Skvely vysledek</strong> = Urcite ano a Spise ano,<br><strong>Prumerny vysledek</strong> = Nemohu se rozhodnout,<br><strong>Slaby vysledek</strong> = Urcite ne, Spise ne</div>
-</div>
-<div class="dpv-block right">
-<div class="dpv-label">Agregace:</div>
-<div class="dpv-copy">Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne</div>
-</div>
-</div>
-<div class="dpv-steps">
-<div class="dpv-step"><span>1.</span> Srovnani s benchmarky</div>
-<div class="dpv-step"><span>2.</span> Drivery za firmu</div>
-<div class="dpv-step"><span>3.</span> Detail otazek</div>
-<div class="dpv-step"><span>4.</span> Drivery v detailu za organizacni jednotku</div>
-</div>
-</div>
 
 
-<!-- Sledovane drivery -->
-<div class="slide sledovane-drivery">
-<div class="sd-header">
-<div class="section-title">Sledovane drivery</div>
-<div class="section-description">
-V modelu sledujeme oblasti, ktere typicky nejvice souviseji s engagementem. Jejich kombinace vytvari dobry zaklad pro prioritizaci dalsich kroku.
-</div>
-</div>
-<div class="sd-grid">
-<div class="sd-card"><span>01</span><strong>Smysl a vyznam prace</strong></div>
-<div class="sd-card"><span>02</span><strong>Spoluprace a vztahy</strong></div>
-<div class="sd-card"><span>03</span><strong>Vedeni a komunikace</strong></div>
-<div class="sd-card"><span>04</span><strong>Rozvoj a rust</strong></div>
-<div class="sd-card"><span>05</span><strong>Nastroje a podminky</strong></div>
-<div class="sd-card"><span>06</span><strong>Oceneni a uznani</strong></div>
-</div>
-</div>
 
-
-<!-- Prezentace driveru -->
-<div class="slide prezentace-driveru">
-<div class="pd-header">
-<div class="section-title">Jak cist vysledky driveru</div>
-<div class="section-description">
-Kazdy driver posuzujeme ze dvou uhlu. Sledujeme, jak silne souvisi s engagementem a zaroven jak pozitivne nebo negativne jej zamestnanci hodnoti.
-</div>
-</div>
-<div class="pd-layout">
-<div class="pd-axis-card impact">
-<div class="pd-axis-kicker">Sila vztahu</div>
-<div class="pd-axis-title">Jak moc driver ovlivnuje engagement</div>
-<p>Vyssi hodnota znamena, ze posun v dane oblasti se s velkou pravdepodobnosti promita i do celkoveho engagementu.</p>
-</div>
-<div class="pd-axis-card score">
-<div class="pd-axis-kicker">Aktualni skore</div>
-<div class="pd-axis-title">Jak si firma v dane oblasti vede</div>
-<p>Nizsi hodnoceni ukazuje, ze zamestnanci tuto oblast casto zazivaji mene pozitivne a muze jit o dulezitou prioritu.</p>
-</div>
-</div>
-</div>
-
-
-<!-- Jak cist drivery benchmark -->
-<div class="slide jakcist-dr-bench">
-<div class="jdb-header">
-<div class="section-title">Jak cist? Drivery a benchmark</div>
-<div class="section-description">
-Kombinace sily vztahu a aktualniho skore pomaha rozlisit, ktere oblasti jsou strategicky nejdulezitejsi a kde firma ztraci oproti trhu.
-</div>
-</div>
-<div class="jdb-quadrants">
-<div class="jdb-box high-priority">
-<div class="jdb-box-title">Vysoka priorita</div>
-<p>Silny vliv na engagement a soucasne slabe skore.</p>
-</div>
-<div class="jdb-box maintain">
-<div class="jdb-box-title">Udrzet</div>
-<p>Silny vliv a soucasne dobre vysledky.</p>
-</div>
-<div class="jdb-box monitor">
-<div class="jdb-box-title">Monitorovat</div>
-<p>Slabsi vliv, ale horsi skore nez benchmark.</p>
-</div>
-<div class="jdb-box secondary">
-<div class="jdb-box-title">Sekundarni fokus</div>
-<p>Slabsi vliv a zaroven prijatelne vysledky.</p>
-</div>
-</div>
-</div>
-
-
-<!-- Jak cist drivery celkem -->
-<div class="slide jakcist-dr-celkem">
-<div class="jdc-header">
-<div class="section-title">Jak cist? Drivery celkem</div>
-<div class="section-description">
-Na souhrnnem slidu se kombinuje informace o sile vztahu s engagementem a o tom, jak si firma v danem driveru skutecne stoji.
-</div>
-</div>
-<div class="jdc-layout">
-<div class="jdc-leftcallout">
-<div class="jdc-leftcallout-text">
-Nejvyse postavene drivery by mely vstupovat do prioritizace akcnich kroku jako prvni, zejmena pokud zaroven nedosahuji silneho skore.
-</div>
-<div class="jdc-leftcallout-arrow"></div>
-</div>
-<div class="jdc-rightlist">
-<div class="jdc-item">
-<div class="jdc-pct">82 %</div>
-<div class="jdc-item-text">Smysl a vyznam prace ma nejsilnejsi vztah k engagementu a soucasne patri k nejdulezitejsim oblastem pro dalsi rozvoj.</div>
-</div>
-<div class="jdc-item">
-<div class="jdc-pct">74 %</div>
-<div class="jdc-item-text">Kvalita vedeni a komunikace je druhy nejsilnejsi driver. I mensi posun v teto oblasti se muze projevit napric celym zazitkem zamestnancu.</div>
-</div>
-<div class="jdc-item">
-<div class="jdc-pct">68 %</div>
-<div class="jdc-item-text">Rozvoj a rust drzi stred pole. Pokud je vsak dlouhodobe slabsi, muze brzdit udrzeni talentu i vnitrni motivaci.</div>
-</div>
-</div>
-</div>
-<div class="jdc-legend">
-<div class="jdc-legend-label">Vysvetlivka</div>
-<div class="jdc-legend-items">
-<div class="jdc-legend-item"><i class="jdc-swatch teal"></i>Silne skore</div>
-<div class="jdc-legend-item"><i class="jdc-swatch tealLight"></i>Spise silne</div>
-<div class="jdc-legend-item"><i class="jdc-swatch grey"></i>Neutralni</div>
-<div class="jdc-legend-item"><i class="jdc-swatch pink"></i>Spise slabe</div>
-<div class="jdc-legend-item"><i class="jdc-swatch pinkStrong"></i>Slabe</div>
-</div>
-</div>
-</div>
 
 
 ```{r}
@@ -2209,6 +2282,20 @@ dept_driver_df <- tibble(
 )
 ```
 
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_benchmark_results(
+  driver_benchmark_results_table,
+  driver_benchmark_columns
+)
+```
+
+
+<!---- Výsledky drivery za firmu---->
 <div class="slide driver-company-v2">
 <div class="drvco-kicker">Vysledky</div>
 <div class="drvco-head">
