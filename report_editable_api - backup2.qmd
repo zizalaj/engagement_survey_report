@@ -1216,10 +1216,6 @@ get_progress <- function(agenda_cfg, section_name) {
     total = agenda_cfg$progress_total
   )
 }
-
-get_section_badge <- function(agenda_cfg, section_name) {
-  sprintf("%02d", match(section_name, agenda_cfg$sections))
-}
 ```
 
 <div class="slide agenda-slide"> 
@@ -2163,11 +2159,9 @@ driver_bar_df <- function(df,nr) {
 
 driver_name <- function(df,nr){
   dr_name <- df %>%
-    ungroup() %>%
     filter(poradi == nr)%>%
     distinct(group_title)%>%
     pull(group_title)%>%
-  first() %>%
   stringr::str_replace_all("\\n", "")
 }
 
@@ -2283,21 +2277,6 @@ get_driver_detail <- function(df,nr){
   return(dr_detail)
 }
 
-get_driver_detail_title <- function(driver_results, rank) {
-  htmltools::htmlEscape(driver_name(driver_results, rank))
-}
-
-get_driver_detail_fig_height <- function(df, nr) {
-  question_count <- df %>%
-    ungroup() %>%
-    filter(poradi == nr) %>%
-    distinct(otazka_title) %>%
-    nrow()
-
-  # Scale slide height by question count so bar thickness stays visually steadier.
-  max(4.1, question_count * 0.52)
-}
-
 
 plot_driver_detail <- function(df,nr){
   
@@ -2332,195 +2311,6 @@ plot_driver_detail <- function(df,nr){
     plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
   )+
   coord_flip()
-}
-
-render_driver_detail_slides <- function(detail_df, total_pages) {
-  if (total_pages <= 0) {
-    return(invisible(NULL))
-  }
-
-  slide_template <- paste(
-    '<div class="slide driver-detail2-v2">',
-    '<div class="drvdet-kicker">Vysledky</div>',
-    '<div class="drvdet-title">{{driver_title}} - Detailne</div>',
-    '<div class="drvdet-plot-full">',
-    '```{r}',
-    '#| echo: false',
-    '#| warning: false',
-    '#| message: false',
-    '#| fig-width: 14',
-    '#| fig-height: {{fig_height}}',
-    '',
-    'plot_driver_detail(detail_df,{{i}})',
-    '```',
-    '</div>',
-    '<div class="jakcist-legend">',
-    '<div class="jakcist-legend-label">Skala odpovedi</div>',
-    '<div class="jakcist-legend-items">',
-    '<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Urcite ano = skore 1</div>',
-    '<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spise ano = skore 2</div>',
-    '<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3</div>',
-    '<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spise ne = skore 4</div>',
-    '<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5</div>',
-    '</div>',
-    '</div>',
-    '</div>',
-    sep = "\n"
-  )
-
-  rendered_slides <- lapply(seq_len(total_pages), function(i) {
-    expanded_slide <- knitr::knit_expand(
-      text = slide_template,
-      i = i,
-      driver_title = get_driver_detail_title(detail_df, i),
-      fig_height = get_driver_detail_fig_height(detail_df, i)
-    )
-
-    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
-  })
-
-  cat(unlist(rendered_slides), sep = "\n")
-}
-
-
-###########################################
-######## detail otázky dle oddělení
-
-
-driver_detail_firma <- final_long_df %>%
-  filter(group_title != "Základní info" & group_title != "Engagement"
-         & typ_otazky == "opinion_scale")%>%
-  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = rev(detail_order)))%>%
-  group_by(respondent_id,group_title,otazka_title)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),.groups="drop")%>%
-  group_by(group_title)%>%
-  count(odpoved_hodnota, name="n")%>%
-  group_by(group_title)%>%
-  mutate(pct_firma = round((n/sum(n))*100,2))%>%
-  left_join(drivery_sort%>%select(group_title,poradi), by = "group_title")
-
-
-get_detail_odd <- function(df,nr){
-  
-  df_odd <- df %>%
-  filter(group_title != "Základní info" & group_title != "Engagement"
-         & typ_otazky == "opinion_scale")%>%
-  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = rev(detail_order)))%>%
-  group_by(respondent_id,group_title)%>%
-    
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),.groups="drop")%>%
-  left_join(odd_responses,by="respondent_id")%>%
-    
-  count(group_title, oddeleni, odpoved_hodnota, name = "n") %>%
-    
-    tidyr::complete(
-      group_title,
-      oddeleni,
-      odpoved_hodnota,
-      fill = list(n = 0)
-    ) %>%
-    
-  group_by(group_title,oddeleni)%>%
-  mutate(pct = round((n/sum(n))*100,2))%>%
-  left_join(drivery_sort%>%select(group_title,poradi), by = "group_title")%>%
-  left_join(driver_detail_firma%>%select(group_title,odpoved_hodnota,pct_firma), by=c("group_title","odpoved_hodnota"))%>%
-  filter(as.character(odpoved_hodnota) == as.character(nr))
-  
-  return(df_odd)
-}
-
-urc_ano_odd <- get_detail_odd(final_long_df,1)
-
-spise_ano_odd <- get_detail_odd(final_long_df,2)
-
-nevim_odd <- get_detail_odd(final_long_df,3)
-
-spise_ne_odd <- get_detail_odd(final_long_df,4)
-
-urc_ne_odd <- get_detail_odd(final_long_df,5)
-
-plot_detail_odd <- function(df,nr){
-  df_plot <- df %>%
-    filter(poradi == nr)
-  
-  ggplot(df_plot, aes(x = oddeleni, y = pct, fill = odpoved_hodnota))+
-  geom_col()+
-  geom_text(
-      aes(label = paste0(pct, "%")),
-      vjust = .5,
-      hjust = 1,
-      family = "Europa",
-      fontface = "bold",
-      size = 12
-    )+
-  scale_fill_manual(values = colors_detail)+
-  #guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
-  theme(
-    panel.grid = element_blank(),
-    panel.background = element_rect(fill = "white", colour = NA),
-    plot.background = element_rect(fill = "white", colour = NA),
-    legend.background = element_rect(fill = "white", colour = NA),
-    legend.box.background = element_rect(fill = "white", colour = NA),
-    axis.text.x  = element_blank(),
-    axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
-    axis.ticks.x = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    legend.title = element_blank(),
-    legend.position = "none",
-    legend.text = element_text(family = "Europa", size = 25),
-    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
-  )+
-  geom_hline(
-  yintercept = unique(df_plot$pct_firma),
-  color = "#A5A5A5",
-  linewidth = 3
-  )+
-  coord_flip()
-  
-}
-
-render_driver_odd_slides <- function(detail_odd_df, total_pages) {
-  if (total_pages <= 0) {
-    return(invisible(NULL))
-  }
-
-  slide_template <- paste(
-    '<div class="slide driver-oddeleni-v2">',
-    '<div class="drvodd-kicker">Vysledky</div>',
-    '<div class="drvodd-title">{{driver_title}} - Detailne - urcite ano srovnani dle oddeleni</div>',
-    '<div class="drvodd-chart">',
-    '```{r}',
-    '#| echo: false',
-    '#| warning: false',
-    '#| message: false',
-    '#| fig-width: 12',
-    '#| fig-height: 7.2',
-    '',
-    'plot_detail_odd(detail_odd_df,{{i}})',
-    '```',
-    '</div>',
-    '<div class="drvodd-legend">',
-    '<div class="drvodd-legend-label">Skala odpovedi</div>',
-    '<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Mira spokojenosti oddeleni</div>',
-    '<div class="drvodd-legend-item"><i class="drvodd-swatch teal"></i>Mira spokojenosti za firmu</div>',
-    '</div>',
-    '</div>',
-    sep = "\n"
-  )
-
-  rendered_slides <- lapply(seq_len(total_pages), function(i) {
-    expanded_slide <- knitr::knit_expand(
-      text = slide_template,
-      i = i,
-      driver_title = get_driver_detail_title(detail_odd_df, i)
-    )
-
-    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
-  })
-
-  cat(unlist(rendered_slides), sep = "\n")
 }
 
 
@@ -2780,23 +2570,67 @@ render_driver_question_items(drivery_overview_complete, drivery_skvele, (nr_driv
 <div class="drvco-footer">Ivod - Uroven engagementu - <span>Zkoumana temata</span> (Ja a firma - Ja a vedouci - Ja a tym) - Srovnani oddeleni</div>
 </div>
 
+<div class="slide driver-detail2-v2">
+<div class="drvdet-kicker">Vysledky</div>
+<div class="drvdet-title">Driver 1/5 - Detailne</div>
+<div class="drvdet-plot-full">
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
-#| results: asis
+#| fig-width: 14
+#| fig-height: 4.1
 
-render_driver_detail_slides(drivery_detail, nr_drivers)
+plot_driver_detail(drivery_detail,1)
 ```
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">Skala odpovedi</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Urcite ano = skore 1</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spise ano = skore 2</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skore 3</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spise ne = skore 4</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Urcite ne = skore 5</div>
+</div>
+</div>
+</div>
 
+<div class="slide driver-oddeleni-v2">
+<div class="drvodd-kicker">Vysledky</div>
+<div class="drvodd-title">Driver 1/5 - Detailne - urcite ano srovnani dle oddeleni</div>
+<div class="drvodd-chart">
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
-#| results: asis
+#| fig-width: 12
+#| fig-height: 7.2
 
-render_driver_odd_slides(urc_ano_odd, nr_drivers)
+ggplot(dept_driver_df, aes(x = value, y = reorder(oddeleni, value))) +
+  geom_col(fill = "#CFCFCF", width = 0.74) +
+  geom_vline(xintercept = 62, color = "#63E8C6", linewidth = 1.6) +
+  geom_text(aes(label = paste0(value, "%")), hjust = 1.08, family = "Europa", size = 5.2) +
+  scale_x_continuous(limits = c(0, 100), breaks = c(0, 25, 50, 75, 100), expand = expansion(mult = c(0, 0.02))) +
+  theme_minimal(base_family = "Europa") +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_line(color = "#D8D8D8", linetype = "dashed"),
+    axis.title = element_blank(),
+    axis.text.y = element_text(size = 13),
+    axis.text.x = element_text(size = 12),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.background = element_rect(fill = "transparent", color = NA)
+  )
 ```
+</div>
+<div class="drvodd-legend">
+<div class="drvodd-legend-label">Skala odpovedi</div>
+<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Mira spokojenosti oddeleni</div>
+<div class="drvodd-legend-item"><i class="drvodd-swatch teal"></i>Mira spokojenosti za firmu</div>
+</div>
+</div>
 
 ```{r}
 #| echo: false
@@ -2894,166 +2728,135 @@ plot_multiple_choice <- function(show_title = FALSE) {
     ) +
     labs(title = if (show_title) "Srovnani odpovedi na multiple choice otazku" else NULL)
 }
-
-render_problematic_section <- function(agenda_cfg) {
-  if (!horsi_vysledky_present) {
-    return(invisible(NULL))
-  }
-
-  slide_html <- knitr::knit_expand(
-    text = paste(
-      '<div class="slide section-cover-v2">',
-      '<div class="scv-badge">{{badge}}</div>',
-      '<div class="scv-title">Problematicke otazky</div>',
-      '<div class="scv-copy">Pokud se nejaka otazka ukaze jako problematicka, verime, ze je dulezite se na ni podivat hloubeji. Proto v nasledujici sekci rozebereme otazky, ktere maji zastoupeni skvelych odpovedi nizsi nez XY %. Tuto hranici jsme urcili na zaklade aktualnich trendu a vlastnich analyz.</div>',
-      '<div class="scv-progress">',
-      '```{r}',
-      '#| echo: false',
-      '#| results: asis',
-      '',
-      'prob_progress <- get_progress(agenda_cfg, "Otázky, které dopadly hůře")',
-      'cat(progress_rectangles(prob_progress$filled, prob_progress$total))',
-      '```',
-      '</div>',
-      '</div>',
-      '',
-      '<div class="slide problematic-breakdown-v2">',
-      '<div class="pbv-kicker">Vysledky</div>',
-      '<div class="pbv-title">Rozpad problematicke otazky 1 dle <span>oddeleni</span></div>',
-      '<div class="pbv-chart">',
-      '```{r}',
-      '#| echo: false',
-      '#| warning: false',
-      '#| message: false',
-      '#| fig-width: 11.8',
-      '#| fig-height: 5.6',
-      '',
-      'plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03"))',
-      '```',
-      '</div>',
-      '<div class="pbv-legend">',
-      '<div class="pbv-legend-label">Skala odpovedi</div>',
-      '<div class="pbv-legend-item"><i class="pbv-swatch teal"></i>Skvely vysledek</div>',
-      '<div class="pbv-legend-item"><i class="pbv-swatch grey"></i>Prumerny vysledek</div>',
-      '<div class="pbv-legend-item"><i class="pbv-swatch pink"></i>Spatny vysledek</div>',
-      '</div>',
-      '</div>',
-      '',
-      '<div class="slide problematic-breakdown-v2">',
-      '<div class="pbv-kicker">Vysledky</div>',
-      '<div class="pbv-title">Rozpad problematicke otazky 1 dle <span>seniority</span></div>',
-      '<div class="pbv-chart pbv-chart-wide">',
-      '```{r}',
-      '#| echo: false',
-      '#| warning: false',
-      '#| message: false',
-      '#| fig-width: 15.4',
-      '#| fig-height: 5.6',
-      '',
-      'plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03", "Oddeleni 04", "Oddeleni 05"))',
-      '```',
-      '</div>',
-      '<div class="pbv-legend">',
-      '<div class="pbv-legend-label">Skala odpovedi</div>',
-      '<div class="pbv-legend-item"><i class="pbv-swatch teal"></i>Skvely vysledek</div>',
-      '<div class="pbv-legend-item"><i class="pbv-swatch grey"></i>Prumerny vysledek</div>',
-      '<div class="pbv-legend-item"><i class="pbv-swatch pink"></i>Spatny vysledek</div>',
-      '</div>',
-      '</div>',
-      sep = "\n"
-    ),
-    badge = get_section_badge(agenda_cfg, "Otázky, které dopadly hůře")
-  )
-
-  cat(knitr::knit_child(text = slide_html, quiet = TRUE, envir = environment()), sep = "\n")
-}
-
-render_multiple_choice_section <- function(agenda_cfg) {
-  if (!mc_present) {
-    return(invisible(NULL))
-  }
-
-  slide_html <- knitr::knit_expand(
-    text = paste(
-      '<div class="slide section-cover-v2">',
-      '<div class="scv-badge">{{badge}}</div>',
-      '<div class="scv-title">Multiple choice otazky</div>',
-      '<div class="scv-copy">Ne vsechny otazky jsou hodnocene na skale od Urcite ano po Urcite ne. V nekterych otazkach rovnez zkoumame preference respondentu s moznosti vybrat vice odpovedi. Tem je venovana nasledujici sekce.</div>',
-      '<div class="scv-progress">',
-      '```{r}',
-      '#| echo: false',
-      '#| results: asis',
-      '',
-      'mc_progress <- get_progress(agenda_cfg, "Multiple choice otázky")',
-      'cat(progress_rectangles(mc_progress$filled, mc_progress$total))',
-      '```',
-      '</div>',
-      '</div>',
-      '',
-      '<div class="slide multiple-howto-v2">',
-      '<div class="jakcist-header jakcist-header--inset">',
-      '<div class="jakcist-header-left">',
-      '<div class="jakcist-header-main">Jak cist?</div>',
-      '<div class="jakcist-header-sub">Multiple choice otazky</div>',
-      '</div>',
-      '<div class="jakcist-q q1">?</div>',
-      '<div class="jakcist-q q2">?</div>',
-      '<div class="jakcist-q q3">?</div>',
-      '</div>',
-      '<div class="mcv-body">',
-      '<div class="mcv-text">',
-      '<div class="mcv-formula">1/3 = 33 %</div>',
-      '<div class="mcv-copy">Tuto moznost preferuje<br><strong>33 %</strong> respondentu</div>',
-      '</div>',
-      '<div class="mcv-chart">',
-      '```{r}',
-      '#| echo: false',
-      '#| warning: false',
-      '#| message: false',
-      '#| fig-width: 8.2',
-      '#| fig-height: 4.8',
-      '',
-      'plot_multiple_choice()',
-      '```',
-      '</div>',
-      '</div>',
-      '</div>',
-      '',
-      '<div class="slide multiple-results-v2">',
-      '<div class="pbv-kicker">Vysledky</div>',
-      '<div class="mrv-title">Srovnani odpovedi na multiple choice otazku</div>',
-      '<div class="mrv-chart">',
-      '```{r}',
-      '#| echo: false',
-      '#| warning: false',
-      '#| message: false',
-      '#| fig-width: 14.5',
-      '#| fig-height: 6.2',
-      '',
-      'plot_multiple_choice()',
-      '```',
-      '</div>',
-      '</div>',
-      sep = "\n"
-    ),
-    badge = get_section_badge(agenda_cfg, "Multiple choice otázky")
-  )
-
-  cat(knitr::knit_child(text = slide_html, quiet = TRUE, envir = environment()), sep = "\n")
-}
 ```
 
+
+
+<!-------- Otázky, které dopadly hůře ----------------------->
+
+<div class="slide section-cover-v2">
+<div class="scv-badge">04</div>
+<div class="scv-title">Problematicke otazky</div>
+<div class="scv-copy">Pokud se nejaka otazka ukaze jako problematicka, verime, ze je dulezite se na ni podivat hloubeji. Proto v nasledujici sekci rozebereme otazky, ktere maji zastoupeni skvelych odpovedi nizsi nez XY %. Tuto hranici jsme urcili na zaklade aktualnich trendu a vlastnich analyz.</div>
+<div class="scv-progress">
 ```{r}
 #| echo: false
 #| results: asis
 
-render_problematic_section(agenda_cfg)
+prob_progress <- get_progress(agenda_cfg, "Otázky, které dopadly hůře")
+
+#cat(progress_rectangles(prob_progress$filled, prob_progress$total))
+cat(progress_rectangles(4,6))
+
+```
+</div>
+</div>
+
+<div class="slide problematic-breakdown-v2">
+<div class="pbv-kicker">Vysledky</div>
+<div class="pbv-title">Rozpad problematicke otazky 1 dle <span>oddeleni</span></div>
+<div class="pbv-chart">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 11.8
+#| fig-height: 5.6
+
+plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03"))
+```
+</div>
+<div class="pbv-legend">
+<div class="pbv-legend-label">Skala odpovedi</div>
+<div class="pbv-legend-item"><i class="pbv-swatch teal"></i>Skvely vysledek</div>
+<div class="pbv-legend-item"><i class="pbv-swatch grey"></i>Prumerny vysledek</div>
+<div class="pbv-legend-item"><i class="pbv-swatch pink"></i>Spatny vysledek</div>
+</div>
+</div>
+
+<div class="slide problematic-breakdown-v2">
+<div class="pbv-kicker">Vysledky</div>
+<div class="pbv-title">Rozpad problematicke otazky 1 dle <span>seniority</span></div>
+<div class="pbv-chart pbv-chart-wide">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 15.4
+#| fig-height: 5.6
+
+plot_problematic_breakdown(c("Oddeleni 01", "Oddeleni 02", "Oddeleni 03", "Oddeleni 04", "Oddeleni 05"))
 ```
 
+
+</div>
+<div class="pbv-legend">
+<div class="pbv-legend-label">Skala odpovedi</div>
+<div class="pbv-legend-item"><i class="pbv-swatch teal"></i>Skvely vysledek</div>
+<div class="pbv-legend-item"><i class="pbv-swatch grey"></i>Prumerny vysledek</div>
+<div class="pbv-legend-item"><i class="pbv-swatch pink"></i>Spatny vysledek</div>
+</div>
+</div>
+
+
+
+<!----------- Multiple choice otázky ------------------------>
+<div class="slide section-cover-v2">
+<div class="scv-badge">05</div>
+<div class="scv-title">Multiple choice otazky</div>
+<div class="scv-copy">Ne vsechny otazky jsou hodnocene na skale od Urcite ano po Urcite ne. V nekterych otazkach rovnez zkoumame preference respondentu s moznosti vybrat vice odpovedi. Tem je venovana nasledujici sekce.</div>
+<div class="scv-progress">
 ```{r}
 #| echo: false
 #| results: asis
 
-render_multiple_choice_section(agenda_cfg)
+cat(progress_rectangles(multiple_choice_progress_filled, multiple_choice_progress_total))
 ```
+</div>
+</div>
+
+<div class="slide multiple-howto-v2">
+<div class="jakcist-header jakcist-header--inset">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">Jak cist?</div>
+<div class="jakcist-header-sub">Multiple choice otazky</div>
+</div>
+<div class="jakcist-q q1">?</div>
+<div class="jakcist-q q2">?</div>
+<div class="jakcist-q q3">?</div>
+</div>
+<div class="mcv-body">
+<div class="mcv-text">
+<div class="mcv-formula">1/3 = 33 %</div>
+<div class="mcv-copy">Tuto moznost preferuje<br><strong>33 %</strong> respondentu</div>
+</div>
+<div class="mcv-chart">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 8.2
+#| fig-height: 4.8
+
+plot_multiple_choice()
+```
+</div>
+</div>
+</div>
+
+<div class="slide multiple-results-v2">
+<div class="pbv-kicker">Vysledky</div>
+<div class="mrv-title">Srovnani odpovedi na multiple choice otazku</div>
+<div class="mrv-chart">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 14.5
+#| fig-height: 6.2
+
+plot_multiple_choice()
+```
+</div>
+</div>
 
