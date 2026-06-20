@@ -1,20 +1,26 @@
-instal_funkce <- function(balicek) {
-  if (!requireNamespace(balicek, quietly = TRUE)) {
-    install.packages(balicek)
-  }
+missing_packages <- character()
 
-  suppressPackageStartupMessages(
-    library(balicek, character.only = TRUE)
+if (!requireNamespace("shiny", quietly = TRUE)) missing_packages <- c(missing_packages, "shiny")
+if (!requireNamespace("DT", quietly = TRUE)) missing_packages <- c(missing_packages, "DT")
+if (!requireNamespace("dplyr", quietly = TRUE)) missing_packages <- c(missing_packages, "dplyr")
+if (!requireNamespace("jsonlite", quietly = TRUE)) missing_packages <- c(missing_packages, "jsonlite")
+if (!requireNamespace("here", quietly = TRUE)) missing_packages <- c(missing_packages, "here")
+if (!requireNamespace("quarto", quietly = TRUE)) missing_packages <- c(missing_packages, "quarto")
+if (!requireNamespace("pagedown", quietly = TRUE)) missing_packages <- c(missing_packages, "pagedown")
+
+if (length(missing_packages) > 0) {
+  stop(
+    "Required package(s) not installed: ",
+    paste(missing_packages, collapse = ", "),
+    call. = FALSE
   )
 }
 
-instal_funkce("shiny")
-instal_funkce("DT")
-instal_funkce("dplyr")
-instal_funkce("jsonlite")
-instal_funkce("here")
-instal_funkce("quarto")
-instal_funkce("pagedown")
+suppressPackageStartupMessages({
+  library(shiny)
+  library(DT)
+  library(dplyr)
+})
 
 source(
   here::here("R", "typeform_helpers.R"),
@@ -130,7 +136,7 @@ create_render_workspace <- function(report_path,
     copy_path_into_dir(asset_path, workspace_dir)
   }
 
-  helper_dir <- file.path(workspace_dir, "codex", "navratnost-editor", "R")
+  helper_dir <- file.path(workspace_dir, "R")
   dir.create(helper_dir, recursive = TRUE, showWarnings = FALSE)
 
   helper_target <- file.path(helper_dir, basename(helper_path))

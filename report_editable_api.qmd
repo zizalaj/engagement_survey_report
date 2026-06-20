@@ -49,32 +49,48 @@ params:
 
 #######################setup
 
-instal_funkce <- function(balicek){
-  if (!requireNamespace(balicek, quietly = T)){
-    install.packages(balicek)
-    library(balicek)
-  }
-  else{
-    library(balicek, character.only = T)
-  }
+missing_packages <- character()
+
+if (!requireNamespace("here", quietly = TRUE)) missing_packages <- c(missing_packages, "here")
+if (!requireNamespace("dplyr", quietly = TRUE)) missing_packages <- c(missing_packages, "dplyr")
+if (!requireNamespace("tidyr", quietly = TRUE)) missing_packages <- c(missing_packages, "tidyr")
+if (!requireNamespace("readxl", quietly = TRUE)) missing_packages <- c(missing_packages, "readxl")
+if (!requireNamespace("extrafont", quietly = TRUE)) missing_packages <- c(missing_packages, "extrafont")
+if (!requireNamespace("showtext", quietly = TRUE)) missing_packages <- c(missing_packages, "showtext")
+if (!requireNamespace("stringr", quietly = TRUE)) missing_packages <- c(missing_packages, "stringr")
+if (!requireNamespace("openxlsx", quietly = TRUE)) missing_packages <- c(missing_packages, "openxlsx")
+if (!requireNamespace("ggplot2", quietly = TRUE)) missing_packages <- c(missing_packages, "ggplot2")
+if (!requireNamespace("lubridate", quietly = TRUE)) missing_packages <- c(missing_packages, "lubridate")
+if (!requireNamespace("purrr", quietly = TRUE)) missing_packages <- c(missing_packages, "purrr")
+if (!requireNamespace("httr", quietly = TRUE)) missing_packages <- c(missing_packages, "httr")
+if (!requireNamespace("jsonlite", quietly = TRUE)) missing_packages <- c(missing_packages, "jsonlite")
+
+if (length(missing_packages) > 0) {
+  stop(
+    "Required package(s) not installed: ",
+    paste(missing_packages, collapse = ", "),
+    call. = FALSE
+  )
 }
 
-instal_funkce("here")
-instal_funkce("dplyr")
-instal_funkce("tidyr")
-instal_funkce("readxl")
-instal_funkce("extrafont")
-instal_funkce("showtext")
-instal_funkce("stringr")
-instal_funkce("openxlsx")
-instal_funkce("ggplot2")
-instal_funkce("lubridate")
-instal_funkce("purrr")
-instal_funkce("httr")
-instal_funkce("jsonlite")
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
+  library(tidyr)
+  library(readxl)
+  library(extrafont)
+  library(showtext)
+  library(stringr)
+  library(openxlsx)
+  library(ggplot2)
+  library(lubridate)
+  library(purrr)
+  library(httr)
+  library(jsonlite)
+})
 
 source(
-  here::here("codex", "navratnost-editor", "R", "typeform_helpers.R"),
+  here::here("R", "typeform_helpers.R"),
   local = TRUE
 )
 
