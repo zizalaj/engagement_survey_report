@@ -51,6 +51,8 @@ rsconnect/
 # API token
 token.txt
 codex/
+output/
+output/**
 
 # agents qmd
 AGENTS.qmd
