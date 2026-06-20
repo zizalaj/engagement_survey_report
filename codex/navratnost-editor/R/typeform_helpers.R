@@ -2,13 +2,27 @@
   if (is.null(x) || length(x) == 0) y else x
 }
 
-read_typeform_token <- function(token_path) {
-  if (!file.exists(token_path)) stop("Token file not found.")
+get_typeform_token <- function(token_path = "token.txt") {
+  token <- trimws(Sys.getenv("TYPEFORM_TOKEN"))
 
-  token <- trimws(readLines(token_path, warn = FALSE, encoding = "UTF-8")[1])
-  if (!nzchar(token)) stop("Token file is empty.")
+  if (nzchar(token)) {
+    return(token)
+  }
 
-  token
+  if (file.exists(token_path)) {
+    token_lines <- readLines(token_path, warn = FALSE, encoding = "UTF-8")
+    token <- if (length(token_lines) > 0) trimws(token_lines[[1]]) else ""
+
+    if (nzchar(token)) {
+      return(token)
+    }
+  }
+
+  stop("Typeform token not found. Set TYPEFORM_TOKEN or provide local token.txt.")
+}
+
+read_typeform_token <- function(token_path = "token.txt") {
+  get_typeform_token(token_path = token_path)
 }
 
 fetch_typeform_forms <- function(tf_token, page = 1, page_size = 100) {
@@ -190,10 +204,18 @@ build_final_long_df <- function(tf_token, form_id, page_size = 1000, max_pages =
 }
 
 find_department_question <- function(zakl_info_otazky, oddeleni_expr = "jakém") {
+  if (is.null(zakl_info_otazky) || length(zakl_info_otazky) == 0) {
+    return(NA_character_)
+  }
+
   oddeleni_index <- stringr::str_detect(zakl_info_otazky, oddeleni_expr)
   matches <- zakl_info_otazky[oddeleni_index]
 
-  matches[[1]] %||% NA_character_
+  if (length(matches) == 0) {
+    return(NA_character_)
+  }
+
+  as.character(matches[[1]])
 }
 
 normalize_oddeleni_manual <- function(oddeleni_manual) {
@@ -224,11 +246,12 @@ normalize_oddeleni_manual <- function(oddeleni_manual) {
 }
 
 extract_return_rate_inputs <- function(final_long_df,
+                                       demography_group_title = NA_character_,
                                        celkem_zamestnancu = NA_real_,
                                        oddeleni_manual = NULL,
                                        oddeleni_expr = "jakém") {
   zakl_info <- final_long_df %>%
-    dplyr::filter(.data$group_title == "Základní info", .data$typ_otazky == "multiple_choice") %>%
+    dplyr::filter(.data$group_title == .env$demography_group_title, .data$typ_otazky == "multiple_choice") %>%
     dplyr::select(.data$odpoved_hodnota, .data$otazka_title)
 
   zakl_info_otazky <- unique(zakl_info$otazka_title)
@@ -306,3 +329,4 @@ prepare_form_choices <- function(forms_df) {
 
   stats::setNames(ids, paste0(labels, " (", ids, ")"))
 }
+

@@ -50,8 +50,22 @@ rsconnect/
 
 # API token
 token.txt
+codex/
 
 # agents qmd
 AGENTS.qmd
+
+# context
+context.txt
+
+# other nuissance folders
+
+data/
+visuals/
+fonts/
+pdf_output/
+report_editable_api_files/
+report_editable_files/
+
 
 /.quarto/
