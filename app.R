@@ -7,6 +7,7 @@ if (!requireNamespace("jsonlite", quietly = TRUE)) missing_packages <- c(missing
 if (!requireNamespace("here", quietly = TRUE)) missing_packages <- c(missing_packages, "here")
 if (!requireNamespace("quarto", quietly = TRUE)) missing_packages <- c(missing_packages, "quarto")
 if (!requireNamespace("pagedown", quietly = TRUE)) missing_packages <- c(missing_packages, "pagedown")
+if (!requireNamespace("zip", quietly = TRUE)) missing_packages <- c(missing_packages, "zip")
 
 if (length(missing_packages) > 0) {
   stop(
@@ -124,6 +125,7 @@ copy_path_into_dir <- function(path, destination_dir) {
 
 create_render_workspace <- function(report_path,
                                     styles_path,
+                                    html_includes_path,
                                     visuals_path,
                                     fonts_path,
                                     helper_path,
@@ -132,7 +134,7 @@ create_render_workspace <- function(report_path,
   dir.create(workspace_dir, recursive = TRUE, showWarnings = FALSE)
   file.create(file.path(workspace_dir, ".here"))
 
-  for (asset_path in c(report_path, styles_path, visuals_path, fonts_path)) {
+  for (asset_path in c(report_path, styles_path, html_includes_path, visuals_path, fonts_path)) {
     copy_path_into_dir(asset_path, workspace_dir)
   }
 
@@ -223,9 +225,11 @@ ui <- shiny::fluidPage(
 )
 
 server <- function(input, output, session) {
+  department_question_pattern <- "(?i)odd"
   token_path <- here::here("token.txt")
   report_path <- here::here("report_editable_api.qmd")
   styles_path <- here::here("styles_editable.css")
+  html_includes_path <- here::here("html_includes")
   visuals_path <- here::here("visuals")
   fonts_path <- here::here("fonts")
   helper_path <- here::here("R", "typeform_helpers.R")
@@ -269,7 +273,8 @@ server <- function(input, output, session) {
     result <- tryCatch({
       inputs <- extract_return_rate_inputs(
         final_long_df = final_long_df,
-        demography_group_title = demography_group
+        demography_group_title = demography_group,
+        oddeleni_expr = department_question_pattern
       )
 
       list(
@@ -308,7 +313,7 @@ server <- function(input, output, session) {
 
     forms_df <- tryCatch({
       tf_token <- get_typeform_token(token_path)
-      fetch_typeform_forms(tf_token, page = 1, page_size = 100)
+      fetch_typeform_forms(tf_token, page = 1, page_size = 200)
     }, error = function(e) {
       status_rv(paste("Nepodarilo se nacist formulare:", conditionMessage(e)))
       NULL
@@ -608,6 +613,7 @@ server <- function(input, output, session) {
     render_workspace <- create_render_workspace(
       report_path = report_path,
       styles_path = styles_path,
+      html_includes_path = html_includes_path,
       visuals_path = visuals_path,
       fonts_path = fonts_path,
       helper_path = helper_path,
@@ -726,8 +732,6 @@ server <- function(input, output, session) {
       temp_dir <- tempfile("reports_")
       dir.create(temp_dir, recursive = TRUE)
       on.exit(unlink(temp_dir, recursive = TRUE, force = TRUE), add = TRUE)
-      old_wd <- getwd()
-      on.exit(setwd(old_wd), add = TRUE)
 
       copied_files <- file.path(temp_dir, basename(files))
       copied <- file.copy(files, copied_files, overwrite = TRUE)
@@ -736,8 +740,7 @@ server <- function(input, output, session) {
         stop("Nepodarilo se pripravit vsechny reporty ke stazeni.")
       }
 
-      setwd(temp_dir)
-      utils::zip(zipfile = file, files = basename(copied_files))
+      zip::zipr(zipfile = file, files = basename(copied_files), root = temp_dir)
     },
     contentType = "application/octet-stream"
   )

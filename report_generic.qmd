@@ -1,0 +1,4101 @@
+---
+format:
+  html:
+    pagedjs: true
+    self-contained: true
+    css:
+      - styles_editable.css
+    toc: false
+    number-sections: false
+    page-layout: full
+    embed-resources: true
+    margin: 0
+    pagedjs-config:
+      bleed: 0
+      marks: none
+output-file: report_test.html
+params:
+  pruzkum: "LyMeitEC"
+  benchmarky: "m4MXWOXz"
+  form_id: null
+  celkem_zamestnancu: 5
+  oddeleni_manual: null
+  report_type: "firma"
+  oddeleni_report: null
+  demografie: "Demografické otázky"
+---
+
+<!---------- Úvodní slide ---------->
+
+<div class="slide intro-slide">
+<div class="top-badge"> <span class="pill">Quick Scan</span></div>
+
+<div class="main accent">Engagement průzkum</div>
+
+<div class="subtitle-wrap">
+<div class="subtitle">Manažerský výstup</div>
+<!-- Reserved empty space for later blurred logo insert -->
+<div class="reserved-logo-space" aria-hidden="true"></div>
+</div>
+
+<!-- Bottom-left SVG logo (update filename as needed) -->
+
+<img src="visuals/ju_logo.svg" alt="juiceUP logo" class="brand-logo">
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+#######################setup
+
+missing_packages <- character()
+
+if (!requireNamespace("here", quietly = TRUE)) missing_packages <- c(missing_packages, "here")
+if (!requireNamespace("dplyr", quietly = TRUE)) missing_packages <- c(missing_packages, "dplyr")
+if (!requireNamespace("tidyr", quietly = TRUE)) missing_packages <- c(missing_packages, "tidyr")
+if (!requireNamespace("readxl", quietly = TRUE)) missing_packages <- c(missing_packages, "readxl")
+if (!requireNamespace("extrafont", quietly = TRUE)) missing_packages <- c(missing_packages, "extrafont")
+if (!requireNamespace("showtext", quietly = TRUE)) missing_packages <- c(missing_packages, "showtext")
+if (!requireNamespace("stringr", quietly = TRUE)) missing_packages <- c(missing_packages, "stringr")
+if (!requireNamespace("openxlsx", quietly = TRUE)) missing_packages <- c(missing_packages, "openxlsx")
+if (!requireNamespace("ggplot2", quietly = TRUE)) missing_packages <- c(missing_packages, "ggplot2")
+if (!requireNamespace("lubridate", quietly = TRUE)) missing_packages <- c(missing_packages, "lubridate")
+if (!requireNamespace("purrr", quietly = TRUE)) missing_packages <- c(missing_packages, "purrr")
+if (!requireNamespace("httr", quietly = TRUE)) missing_packages <- c(missing_packages, "httr")
+if (!requireNamespace("jsonlite", quietly = TRUE)) missing_packages <- c(missing_packages, "jsonlite")
+
+if (length(missing_packages) > 0) {
+  stop(
+    "Required package(s) not installed: ",
+    paste(missing_packages, collapse = ", "),
+    call. = FALSE
+  )
+}
+
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
+  library(tidyr)
+  library(readxl)
+  library(extrafont)
+  library(showtext)
+  library(stringr)
+  library(openxlsx)
+  library(ggplot2)
+  library(lubridate)
+  library(purrr)
+  library(httr)
+  library(jsonlite)
+})
+
+source(
+  here::here("R", "typeform_helpers.R"),
+  local = TRUE
+)
+
+
+
+
+
+font_add("Europa", regular = here("fonts", "EuropaGroNr2JU Regular.otf"),
+         bold = here("fonts", "EuropaGroNr2JU Bold.ttf"))
+showtext_auto()
+
+report_type <- tolower(as.character(params$report_type %||% "firma")[[1]])
+
+if (!report_type %in% c("firma", "oddeleni")) {
+  stop("Unsupported report_type. Use 'firma' or 'oddeleni'.")
+}
+
+is_firma_report <- identical(report_type, "firma")
+is_department_report <- identical(report_type, "oddeleni")
+oddeleni_report <- params$oddeleni_report %||% NA_character_
+report_scope_title <- if (is_department_report) "za odd&#283;len&#237;" else "za firmu"
+driver_scope_title <- if (is_department_report) "Drivery za odd&#283;len&#237;" else "Drivery za firmu"
+driver_scope_howto_title <- if (is_department_report) "Vysledky driveru za odd&#283;len&#237;" else "Vysledky driveru za firmu"
+driver_benchmark_current_label <- if (is_department_report && !is.na(oddeleni_report) && nzchar(oddeleni_report)) {
+  oddeleni_report
+} else {
+  "Aktualni pruzkum"
+}
+
+manual_total_employees <- suppressWarnings(as.numeric(params$celkem_zamestnancu %||% 5))
+oddeleni_manual_raw <- params$oddeleni_manual %||% NULL
+tf_token <- get_typeform_token(here::here("token.txt"))
+
+
+##############načtení dat api
+
+tf_get <- function(page,page_size){
+  res <- httr::GET(
+    "https://api.typeform.com/forms",
+    httr::add_headers(Authorization = paste("Bearer", tf_token)),
+    query = list(page = page, page_size = page_size)
+  )
+  httr::stop_for_status(res)
+  
+  out <- jsonlite::fromJSON(httr::content(res, "text", encoding = "UTF-8"))
+  items_df <- out$items
+}
+
+
+forms <- tf_get(1,100)
+
+
+form <- params$form_id %||% params$pruzkum
+
+
+get_form_definition <- function(tf_token, form_id) {
+  url <- paste0("https://api.typeform.com/forms/", form_id)
+  res <- httr::GET(url, httr::add_headers(Authorization = paste("Bearer", tf_token)))
+  httr::stop_for_status(res)
+  jsonlite::fromJSON(httr::content(res, "text", encoding = "UTF-8"), simplifyVector = FALSE)
+}
+
+def <- get_form_definition(tf_token,form)
+
+get_responses_page <- function(tf_token, form_id, page_size = 1000, before = NULL) {
+  base <- paste0("https://api.typeform.com/forms/", form_id, "/responses")
+  query <- list(page_size = page_size)
+  if (!is.null(before) && nzchar(before)) query$before <- before
+  
+  res <- httr::GET(
+    base,
+    httr::add_headers(Authorization = paste("Bearer", tf_token)),
+    query = query
+  )
+  httr::stop_for_status(res)
+  jsonlite::fromJSON(httr::content(res, "text", encoding = "UTF-8"), simplifyVector = FALSE)
+}
+
+
+responses <- get_responses_page(tf_token,form)
+
+
+
+# Fetch ALL responses by walking "before" tokens (descending submitted_at order)
+get_all_responses <- function(tf_token, form_id, page_size = 1000, max_pages = 200) {
+  all_items <- list()
+  before <- NULL
+  
+  for (i in seq_len(max_pages)) {
+    page <- get_responses_page(tf_token, form_id, page_size = page_size, before = before)
+    items <- page$items %||% list()
+    
+    if (length(items) == 0) break
+    all_items <- c(all_items, items)
+    
+    # Typeform includes a per-response "token" used for before/after traversal
+    last_token <- items[[length(items)]]$token %||% ""
+    if (!nzchar(last_token)) break
+    
+    # Next page: older than the last token
+    before <- last_token
+    
+    # If we got less than page_size, we're done
+    if (length(items) < page_size) break
+  }
+  
+  all_items
+}
+
+all_responses <- get_all_responses(tf_token,form)
+
+
+#####zpracování datového souboru z průzkumu
+#####celkový loop - zpracování odpovědí
+
+
+odpoved_klasif <- function(o){
+  if(o[["field"]][["type"]] == 'multiple_choice'){
+    return(as.character(o[["choice"]][["label"]]))
+  }
+  else if(o[["field"]][["type"]] == 'long_text'){
+    return(as.character(o[["text"]]))
+  }
+  else{
+    return(as.character(o[["number"]]))
+  }
+}
+
+
+###### 
+######tvorba listu + long dataframe
+
+preprocess_data <- function(ls){
+  
+  processed_list <- list()
+  
+  ##loop přes respondenty
+  for(i in seq_along(ls)){
+    
+    
+    respondent <- ls[[i]]
+    
+    resp_data <- list(
+      respondent_id  = respondent[["response_id"]],
+      landed_at    = respondent[["landed_at"]],
+      submitted_at = respondent[["submitted_at"]]
+    )
+    
+    respondent_x <- list()
+    ###loop přes odpovědi uvnitř respondenta
+    for(j in seq_along(respondent[["answers"]])){
+      
+      odp <- respondent[["answers"]][[j]]
+      
+      odpoved <- list(
+        respondent_id = resp_data$respondent_id,
+        landed_at = resp_data$landed_at,
+        submitted_at = resp_data$submitted_at,
+        typ_otazky = odp[["field"]][["type"]],
+        otazka_ref = odp[["field"]][["ref"]],
+        odpoved_hodnota = odpoved_klasif(odp)
+      )
+      
+      respondent_x[[j]] <- odpoved
+      
+    }
+    
+    processed_list[[i]] <- respondent_x
+  }
+  
+  return(processed_list)
+}
+
+
+
+survey_data_preprocessed <- preprocess_data(all_responses)
+
+
+survey_df_long <- dplyr::bind_rows(unlist(survey_data_preprocessed, recursive = FALSE))
+
+
+
+#######
+######číselník skupin
+
+
+add_group_title <- function(f){
+  if(f[["type"]] == 'group'){
+    return(as.character(f[["title"]]))
+  }
+  else{
+    return(NA_character_)
+  }
+}
+
+add_group_ref <- function(f){
+  if(f[["type"]] == 'group'){
+    return(as.character(f[["ref"]]))
+  }
+}
+
+
+add_q_title <- function(f){
+  
+  if(f[["type"]] == 'group'){
+    return(as.character(f[["ref"]]))
+  }
+  
+}
+
+
+process_survey_ciselnik <- function(ls){
+  
+  k <- 1
+  
+  survey_list <- list()
+  
+  for(i in seq_along(ls[["fields"]])){
+    
+    field <- ls[["fields"]][[i]]
+    
+    if(field[["type"]] == 'group'){
+      
+      group_data <- list(
+        group_title = add_group_title(field),
+        group_ref = add_group_ref(field)
+      )
+      
+      
+      for(j in seq_along(field[["properties"]][["fields"]])){
+        
+        ot <- field[["properties"]][["fields"]][[j]]
+        
+        survey_list[[k]] <- list(
+          
+          group_title = group_data$group_title,
+          group_ref = group_data$group_ref,
+          otazka_title = ot[["title"]],
+          otazka_ref = ot[["ref"]]
+        )
+        k <- k+1
+      }
+    }
+    
+    else if(field[["type"]] == 'statement') next
+    
+    else{
+      
+      survey_list[[k]] <- list(
+        group_title = NA_character_,
+        group_ref = NA_character_,
+        otazka_title = field[["title"]],
+        otazka_ref = field[["ref"]]
+      )
+      
+      k <- k+1
+    }
+    
+  }
+  return(survey_list)
+  
+}
+
+ciselnik_list <- process_survey_ciselnik(def)
+
+ciselnik_df <- dplyr::bind_rows(ciselnik_list)
+
+### funkce na standardizování textu
+
+clean_text <- function(x) {
+  stringr::str_squish(stringr::str_trim(x))
+}
+
+
+final_long_df <- survey_df_long %>%
+  left_join(ciselnik_df, by = "otazka_ref")%>%
+  mutate(otazka_title = clean_text(otazka_title))
+
+
+
+######### další zpracování - specifické pro engagement survey
+
+multiple_choice_extra <- final_long_df %>% 
+  filter(typ_otazky == "multiple_choice") %>%
+  summarise(n = n_distinct(otazka_ref))
+
+
+open <- final_long_df %>%
+  filter(typ_otazky == "rating") %>%
+  summarise(n = n_distinct(otazka_ref))
+
+###identifikace sekcí helpers
+
+  
+include_multiple_choice <- function(df){
+  
+  multiple_choice_extra <- df %>% 
+    filter(typ_otazky == "multiple_choice") %>%
+    summarise(n = n_distinct(otazka_ref))
+  
+  if(multiple_choice_extra$n > 3){
+    return(TRUE)
+  }
+  else{return(FALSE)}
+  
+}
+
+
+include_openended <- function(df){
+  openend <- df %>%
+    filter(typ_otazky == "long_text") %>%
+    summarise(n = n_distinct(otazka_ref))
+  
+  if(openend$n > 0){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+if (FALSE) {
+driver_benchmark_company_values <- drivery_overview_firma %>%
+  filter(grepl("Skv", odpoved_kat)) %>%
+  select(group_title, pct) %>%
+  rename(Firma = pct)
+
+drivery_benchmark_report <- drivery_overview %>%
+  filter(grepl("Skv", odpoved_kat)) %>%
+  select(group_title, pct)
+
+names(drivery_benchmark_report)[names(drivery_benchmark_report) == "pct"] <- driver_benchmark_current_label
+
+drivery_benchmark_firma <- drivery_benchmark_report %>%
+  left_join(
+    bench_df_complete %>% dplyr::select(group_title,otazka_title,odpoved_hodnota),
+    by = "group_title"
+  )%>%
+  filter(!is.na(otazka_title))%>%
+  pivot_wider(names_from = otazka_title, values_from=odpoved_hodnota)
+
+if (is_department_report) {
+  drivery_benchmark_firma <- drivery_benchmark_report %>%
+    left_join(driver_benchmark_company_values, by = "group_title") %>%
+    left_join(
+      bench_df_complete %>% dplyr::select(group_title,otazka_title,odpoved_hodnota),
+      by = "group_title"
+    )%>%
+    filter(!is.na(otazka_title))%>%
+    pivot_wider(names_from = otazka_title, values_from=odpoved_hodnota)
+}
+
+drivery_benchmark_firma <- drivery_benchmark_firma %>%
+  left_join(drivery_sort %>% dplyr::select(group_title,poradi),
+            by = "group_title")%>%
+  arrange(poradi)%>%
+  dplyr::select(-poradi)
+
+}
+
+include_horsi <- function(df){
+  if(any(df$pod_benchmarkem)){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+mc_present <- include_multiple_choice(final_long_df)
+
+openend_present <- include_openended(final_long_df)
+
+####zpracování odpovědí
+
+##### demografie
+
+zakl_info <- final_long_df %>%
+  filter(group_title == params$demografie & typ_otazky == "multiple_choice")%>%
+  dplyr::select(odpoved_hodnota,otazka_title,respondent_id)
+
+zakl_info_otazky <- unique(zakl_info$otazka_title)
+
+## průměrná doba vyplnění
+
+doba_vyplneni <- final_long_df %>%
+  dplyr::select(respondent_id,landed_at,submitted_at)%>%
+  group_by(respondent_id) %>%
+  mutate(
+    landed_at = ymd_hms(landed_at),
+    submitted_at = ymd_hms(submitted_at),
+    cas_vyplneni = submitted_at - landed_at
+  )%>%
+  distinct(respondent_id,cas_vyplneni)
+
+avg_doba_vyplneni <- mean(doba_vyplneni$cas_vyplneni)
+avg_doba_vyplneni <- round(as.numeric(avg_doba_vyplneni, units = "mins"),0)
+
+
+#### počet respondentů
+
+pocet_resp <- length(unique(final_long_df$respondent_id))
+
+celkem_zamestnancu <- 5
+
+
+#### návratnost 
+
+navratnost <- round((pocet_resp/celkem_zamestnancu)*100,2)
+
+## respondenti per oddělení
+
+
+oddeleni_expr <- "(?i)odd"
+
+oddeleni_index <- str_detect(zakl_info_otazky,oddeleni_expr)
+
+oddeleni_ot <- zakl_info_otazky[oddeleni_index]
+
+oddeleni <- zakl_info %>%
+  filter(otazka_title == oddeleni_ot) %>%
+  group_by(respondent_id) %>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota))) %>%
+  count(odpoved_hodnota, name = "pocet_respondentu") %>%
+  mutate(pocet_zamestnancu = 0)
+
+
+odd_souhrn_long <- oddeleni %>%
+  pivot_longer(cols= 2:3, names_to = "Kategorie", values_to = "Pocet")
+
+
+odd_souhrn_long$oddeleni_trunc <- str_trunc(odd_souhrn_long$odpoved_hodnota, 
+                                            width = 20, ellipsis = "...")
+
+
+#### věk
+
+vek_souhrn <- final_long_df %>%
+  filter(group_title == params$demografie & typ_otazky == "number") %>%
+  dplyr::select(respondent_id,odpoved_hodnota) %>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota))%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name = "pocet")%>%
+  rename(vek = odpoved_hodnota)
+
+
+
+#### pozice
+
+pozice_expr <- "(?i)pozic"
+
+pozice_index <- str_detect(zakl_info_otazky, pozice_expr)
+
+pozice_ot <- zakl_info_otazky[pozice_index]
+
+
+pozice_souhrn <- zakl_info %>%
+  filter(otazka_title == pozice_ot)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name="pocet")%>%
+  rename(pozice = odpoved_hodnota)
+
+#### seniorita
+
+doba_expr <- "(?i)dlouho|pusob"
+
+az_expr <- "\\d+(?=\\-{1})" ### popř. az_expr <- "\\d+(?= až{1})"
+
+do_expr <- "do\\s\\d{1}"
+
+vice_expr <- "(?i)vice"
+
+doba_index <- str_detect(zakl_info_otazky, doba_expr)
+
+doba_ot <- zakl_info_otazky[doba_index]
+
+doba_souhrn <- zakl_info %>%
+  filter(otazka_title == doba_ot)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name="pocet")%>%
+  mutate(az = case_when(
+    str_detect(odpoved_hodnota,do_expr) == T ~ 0,
+    str_detect(odpoved_hodnota,vice_expr) == T ~ 100,
+    .default = as.integer(str_extract(odpoved_hodnota,az_expr))
+  )) %>%
+  arrange(az) %>%
+  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = odpoved_hodnota))%>%
+  rename(doba=odpoved_hodnota)
+
+normalize_oddeleni_manual <- function(oddeleni_manual) {
+  if (is.null(oddeleni_manual) || length(oddeleni_manual) == 0) {
+    return(tibble::tibble(
+      odpoved_hodnota = character(),
+      pocet_zamestnancu = numeric()
+    ))
+  }
+
+  if (is.character(oddeleni_manual) && length(oddeleni_manual) == 1 && nzchar(oddeleni_manual)) {
+    oddeleni_manual <- jsonlite::fromJSON(oddeleni_manual, simplifyDataFrame = TRUE)
+  }
+
+  oddeleni_manual <- tibble::as_tibble(oddeleni_manual)
+
+  if (!all(c("odpoved_hodnota", "pocet_zamestnancu") %in% names(oddeleni_manual))) {
+    stop("oddeleni_manual must contain odpoved_hodnota and pocet_zamestnancu.")
+  }
+
+  oddeleni_manual %>%
+    transmute(
+      odpoved_hodnota = as.character(odpoved_hodnota),
+      pocet_zamestnancu = suppressWarnings(as.numeric(pocet_zamestnancu))
+    )
+}
+
+find_first_matching_question <- function(questions, pattern) {
+  if (length(questions) == 0) {
+    return(NA_character_)
+  }
+
+  matches <- questions[stringr::str_detect(questions, pattern)]
+
+  if (length(matches) == 0) {
+    return(NA_character_)
+  }
+
+  as.character(matches[[1]])
+}
+
+build_department_responses <- function(zakl_info, oddeleni_ot) {
+  if (is.na(oddeleni_ot) || !nzchar(oddeleni_ot)) {
+    return(tibble::tibble(
+      respondent_id = character(),
+      odpoved_hodnota = character()
+    ))
+  }
+
+  zakl_info %>%
+    filter(otazka_title == oddeleni_ot) %>%
+    group_by(respondent_id) %>%
+    summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)), .groups = "drop")
+}
+
+calc_return_rate <- function(respondent_count, employee_count) {
+  if (!isTRUE(is.finite(employee_count)) || employee_count <= 0) {
+    return(NA_real_)
+  }
+
+  round((respondent_count / employee_count) * 100, 2)
+}
+
+build_report_context <- function(df,
+                                 demografie_title,
+                                 oddeleni_manual_df,
+                                 employee_count,
+                                 oddeleni_expr = "(?i)odd") {
+  zakl_info <- df %>%
+    filter(group_title == demografie_title & typ_otazky == "multiple_choice") %>%
+    dplyr::select(odpoved_hodnota, otazka_title, respondent_id)
+
+  zakl_info_otazky <- unique(zakl_info$otazka_title)
+  oddeleni_ot <- find_first_matching_question(zakl_info_otazky, oddeleni_expr)
+  oddeleni_responses <- build_department_responses(zakl_info, oddeleni_ot)
+
+  oddeleni <- oddeleni_responses %>%
+    count(odpoved_hodnota, name = "pocet_respondentu") %>%
+    left_join(oddeleni_manual_df, by = "odpoved_hodnota")
+
+  if (!"pocet_zamestnancu" %in% names(oddeleni)) {
+    oddeleni$pocet_zamestnancu <- numeric()
+  }
+
+  odd_souhrn_long <- oddeleni %>%
+    pivot_longer(cols = c("pocet_respondentu", "pocet_zamestnancu"), names_to = "Kategorie", values_to = "Pocet")
+
+  odd_souhrn_long$oddeleni_trunc <- str_trunc(
+    odd_souhrn_long$odpoved_hodnota,
+    width = 20,
+    ellipsis = "..."
+  )
+
+  doba_vyplneni <- df %>%
+    dplyr::select(respondent_id, landed_at, submitted_at) %>%
+    group_by(respondent_id) %>%
+    mutate(
+      landed_at = ymd_hms(landed_at),
+      submitted_at = ymd_hms(submitted_at),
+      cas_vyplneni = submitted_at - landed_at
+    ) %>%
+    distinct(respondent_id, cas_vyplneni)
+
+  avg_doba_vyplneni <- mean(doba_vyplneni$cas_vyplneni)
+  avg_doba_vyplneni <- round(as.numeric(avg_doba_vyplneni, units = "mins"), 0)
+
+  pocet_resp <- dplyr::n_distinct(df$respondent_id)
+  navratnost <- calc_return_rate(pocet_resp, employee_count)
+
+  list(
+    zakl_info = zakl_info,
+    zakl_info_otazky = zakl_info_otazky,
+    oddeleni_expr = oddeleni_expr,
+    oddeleni_ot = oddeleni_ot,
+    oddeleni_responses = oddeleni_responses,
+    oddeleni = oddeleni,
+    odd_souhrn_long = odd_souhrn_long,
+    doba_vyplneni = doba_vyplneni,
+    avg_doba_vyplneni = avg_doba_vyplneni,
+    pocet_resp = pocet_resp,
+    navratnost = navratnost
+  )
+}
+
+df_firma <- final_long_df
+oddeleni_manual_df <- normalize_oddeleni_manual(oddeleni_manual_raw)
+company_context <- build_report_context(
+  df_firma,
+  params$demografie,
+  oddeleni_manual_df,
+  manual_total_employees
+)
+
+if (is_department_report) {
+  if (is.na(oddeleni_report) || !nzchar(oddeleni_report)) {
+    stop("oddeleni_report must be provided when report_type = 'oddeleni'.")
+  }
+
+  selected_respondents <- company_context$oddeleni_responses %>%
+    filter(odpoved_hodnota == oddeleni_report) %>%
+    pull(respondent_id) %>%
+    unique()
+
+  if (length(selected_respondents) == 0) {
+    stop("No respondents found for oddeleni_report = ", oddeleni_report)
+  }
+
+  df_report <- df_firma %>%
+    filter(respondent_id %in% selected_respondents)
+
+  current_report_employee_count <- oddeleni_manual_df %>%
+    filter(odpoved_hodnota == oddeleni_report) %>%
+    pull(pocet_zamestnancu)
+
+  current_report_employee_count <- if (length(current_report_employee_count) == 0) {
+    NA_real_
+  } else {
+    current_report_employee_count[[1]]
+  }
+} else {
+  df_report <- df_firma
+  current_report_employee_count <- manual_total_employees
+}
+
+final_long_df <- df_report
+report_context <- build_report_context(
+  final_long_df,
+  params$demografie,
+  oddeleni_manual_df,
+  current_report_employee_count
+)
+
+mc_present <- include_multiple_choice(final_long_df)
+openend_present <- include_openended(final_long_df)
+
+zakl_info <- report_context$zakl_info
+zakl_info_otazky <- report_context$zakl_info_otazky
+doba_vyplneni <- report_context$doba_vyplneni
+avg_doba_vyplneni <- report_context$avg_doba_vyplneni
+pocet_resp <- report_context$pocet_resp
+celkem_zamestnancu <- current_report_employee_count
+navratnost <- report_context$navratnost
+oddeleni_expr <- report_context$oddeleni_expr
+oddeleni_index <- str_detect(zakl_info_otazky, oddeleni_expr)
+oddeleni_ot <- company_context$oddeleni_ot
+oddeleni <- report_context$oddeleni
+odd_souhrn_long <- report_context$odd_souhrn_long
+
+vek_souhrn <- final_long_df %>%
+  filter(group_title == params$demografie & typ_otazky == "number") %>%
+  dplyr::select(respondent_id,odpoved_hodnota) %>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota))%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name = "pocet")%>%
+  rename(vek = odpoved_hodnota)
+
+pozice_index <- str_detect(zakl_info_otazky, pozice_expr)
+pozice_ot <- zakl_info_otazky[pozice_index]
+pozice_souhrn <- zakl_info %>%
+  filter(otazka_title == pozice_ot)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name="pocet")%>%
+  rename(pozice = odpoved_hodnota)
+
+doba_index <- str_detect(zakl_info_otazky, doba_expr)
+doba_ot <- zakl_info_otazky[doba_index]
+doba_souhrn <- zakl_info %>%
+  filter(otazka_title == doba_ot)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  count(odpoved_hodnota,name="pocet")%>%
+  mutate(az = case_when(
+    str_detect(odpoved_hodnota,do_expr) == T ~ 0,
+    str_detect(odpoved_hodnota,vice_expr) == T ~ 100,
+    .default = as.integer(str_extract(odpoved_hodnota,az_expr))
+  )) %>%
+  arrange(az) %>%
+  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = odpoved_hodnota))%>%
+  rename(doba=odpoved_hodnota)
+#############################################################################
+
+###############engagement
+##### engagement index celkem
+
+engagement_index_celkem <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         uroven_engagementu = as.factor(case_when(
+           odpoved_hodnota < 2 ~ "Úplný engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "Částečný engagement",
+           odpoved_hodnota > 3 ~ "Slabý engagement"
+         ))
+         ) %>%
+  ungroup()%>%
+  filter(!is.na(uroven_engagementu))%>%
+  group_by(uroven_engagementu)%>%
+  summarise(n = n(), groups="drop") %>%
+  mutate(pct = round((n/sum(n))*100,1))
+
+uplny_engagement <- engagement_index_celkem %>%
+  filter(uroven_engagementu == "Úplný engagement")%>%
+  pull(pct)
+
+castecny_engagement <- engagement_index_celkem %>%
+  filter(uroven_engagementu == "Částečný engagement")%>%
+  pull(pct)
+
+slaby_engagement <- engagement_index_celkem %>%
+  filter(uroven_engagementu == "Slabý engagement")%>%
+  pull(pct)
+
+#### engagementové otázky
+uplny_engagement <- ifelse(length(uplny_engagement) > 0, uplny_engagement, 0)
+castecny_engagement <- ifelse(length(castecny_engagement) > 0, castecny_engagement, 0)
+slaby_engagement <- ifelse(length(slaby_engagement) > 0, slaby_engagement, 0)
+
+engagement_index_celkem_firma <- df_firma %>%
+  filter(group_title == "Engagement") %>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         uroven_engagementu = as.factor(case_when(
+           odpoved_hodnota < 2 ~ "ĂšplnĂ˝ engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "ÄŚĂˇsteÄŤnĂ˝ engagement",
+           odpoved_hodnota > 3 ~ "SlabĂ˝ engagement"
+         ))
+         ) %>%
+  ungroup()%>%
+  filter(!is.na(uroven_engagementu))%>%
+  group_by(uroven_engagementu)%>%
+  summarise(n = n(), groups="drop") %>%
+  mutate(pct = round((n/sum(n))*100,1))
+
+uplny_engagement_firma <- engagement_index_celkem_firma %>%
+  filter(uroven_engagementu == "ĂšplnĂ˝ engagement") %>%
+  pull(pct)
+uplny_engagement_firma <- ifelse(length(uplny_engagement_firma) > 0, uplny_engagement_firma, 0)
+
+eng_otazky <- ciselnik_df %>%
+  filter(group_title == "Engagement") %>%
+  pull(otazka_title)
+
+
+engagement_index_otazky <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         uroven_engagementu = as.factor(case_when(
+           odpoved_hodnota < 2 ~ "Úplný engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "Částečný engagement",
+           odpoved_hodnota > 3 ~ "Slabý engagement"
+         ))) %>%
+  ungroup()%>%
+  filter(!is.na(uroven_engagementu))%>%
+  group_by(uroven_engagementu,otazka_title) %>%
+  summarise(n = n()) %>%
+  group_by(otazka_title) %>%
+  mutate(pct = round((n/sum(n))*100,1),
+         otazka_title = factor(otazka_title, levels = rev(eng_otazky))) %>%
+  ungroup()
+
+### pořadí hodnot
+eng_order <- c("Úplný engagement","Částečný engagement","Slabý engagement")
+
+engagement_index_otazky$uroven_engagementu <- factor(engagement_index_otazky$uroven_engagementu,
+                            levels = rev(eng_order))
+
+###### engagement index podle oddělení
+
+odd_responses <- final_long_df %>%
+  filter(otazka_title == oddeleni_ot)%>%
+  dplyr::select(respondent_id,odpoved_hodnota)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  rename(oddeleni = odpoved_hodnota)
+
+
+
+eng_index_odd <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         uroven_engagementu = as.factor(case_when(
+           odpoved_hodnota < 2 ~ "Úplný engagement",
+           odpoved_hodnota >= 2 & odpoved_hodnota <= 3 ~ "Částečný engagement",
+           odpoved_hodnota > 3 ~ "Slabý engagement"
+         ))) %>%
+  left_join(odd_responses,by = "respondent_id")%>%
+  ungroup()%>%
+  filter(!is.na(odpoved_hodnota))%>%
+  group_by(oddeleni,uroven_engagementu) %>%
+  count(uroven_engagementu, name="n") %>%
+  group_by(oddeleni)%>%
+  mutate(pct = round((n/sum(n))*100,1)) %>%
+  ungroup()
+
+eng_index_odd$uroven_engagementu <- factor(eng_index_odd$uroven_engagementu,
+                            levels = rev(eng_order))
+
+split_depts <- function(df){
+  
+  odd <- unique(df$oddeleni)
+  nr_dept <- length(odd)
+  ratio <- nr_dept/10
+  mod <- nr_dept%%10
+  df_list <- list()
+  
+  
+  if(mod==0){
+    nr_slides <- ratio
+    iterable <- seq(1,nr_slides,1)
+    
+    for(i in iterable){
+      ind <- i*10
+      odd_i <- na.omit(odd[(ind-9):ind])
+      d <- df%>%filter(oddeleni %in% odd_i)
+      
+      df_list[[i]] <- d
+    }
+  }
+  else{
+    nr_slides <- ratio+1
+    iterable <- seq(1,nr_slides,1)
+    
+    for(i in iterable){
+      ind <- i*10
+      odd_i <- na.omit(odd[(ind-9):ind])
+      d <- df%>%filter(oddeleni %in% odd_i)
+      
+      df_list[[i]] <- d
+    }
+  }
+  return(df_list)
+}
+
+eng_odd_list <- split_depts(eng_index_odd)
+
+eng_odd_pages <- length(eng_odd_list)
+
+render_eng_odd_slides <- function(df_list, total_pages) {
+  if (length(df_list) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide eio-v2">',
+    '<div class="eio-header">',
+    '<p class="ei-kicker">Výsledky</p>',
+    '<h1 class="eio-title">Srovnání <span class="accent-teal">engagement indexu</span> napříč odděleními</h1>',
+    '</div>',
+    '<div class="eio-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 13.4',
+    '#| fig-height: 7',
+    '#| fig-align: center',
+    '',
+    'df_page <- df_list[[{{i}}]]',
+    '',
+    'ggplot(df_page, aes(x = oddeleni, y = pct, fill = uroven_engagementu)) +',
+    '  geom_col(position = position_stack(), width = 0.62) +',
+    '  geom_text(',
+    '    aes(label = ifelse(pct > 5,paste0(pct, "%"),"")),',
+    '    position = position_stack(vjust = 0.5),',
+    '    family = "Europa",',
+    '    fontface = "bold",',
+    '    size = 12',
+    '  ) +',
+    'scale_x_discrete(',
+    'labels = function(x) str_trunc(x, width = 20, side = "right", ellipsis = "...")',
+    ') +',
+    '  scale_fill_manual(values = colors_eng) +',
+    '  theme_minimal(base_family = "Europa") +',
+    '  theme(',
+    '    panel.grid = element_blank(),',
+    '    panel.background = element_rect(fill = "transparent", colour = NA),',
+    '    plot.background = element_rect(fill = "transparent", colour = NA),',
+    '    axis.text.x = element_text(family = "Europa", face = "bold", size = 25, angle = 45),',
+    '    axis.text.y = element_blank(),',
+    '    axis.ticks = element_blank(),',
+    '    axis.title.x = element_blank(),',
+    '    axis.title.y = element_blank(),',
+    '    legend.position = "none",',
+    '    plot.margin = margin(t = 10, r = 86, b = 0, l = 10)',
+    '  )',
+    '```',
+    '</div>',
+    '{{arrow_html}}',
+    '<div class="eio-legend"><div class="eio-legend-label">Škála odpovědí</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Určitě ano</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Spíše ano</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Nemohu se rozhodnout</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Spíše ne</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Určitě ne</div></div></div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(df_list), function(i) {
+    arrow_html <- if (i < total_pages) {
+      '<div class="eio-next" aria-hidden="true"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"></div>'
+    } else {
+      ""
+    }
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      arrow_html = arrow_html
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+
+##### individuální míra engagementu
+individual_eng_order <- c("Engaged","Potential","Disengaged")
+
+ind_engagement <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  group_by(respondent_id)%>%
+  mutate(
+    odpoved_hodnota = as.numeric(odpoved_hodnota),
+    prum_eng = mean(odpoved_hodnota),
+    ind_mira = case_when(
+      prum_eng <= 1.2 ~ "Engaged",
+      prum_eng > 1.2 & prum_eng <= 2.5 ~ "Potential",
+      prum_eng > 2.5 ~ "Disengaged"
+    )) %>%
+  ungroup()%>%
+  distinct(respondent_id,ind_mira) %>%
+  group_by(ind_mira) %>%
+  summarise(n = n()) %>%
+  mutate(pct = round((n/sum(n))*100,1),
+         ind_mira = factor(ind_mira, levels = rev(individual_eng_order)))
+
+engaged <- ind_engagement%>%filter(ind_mira == "Engaged")%>%pull(pct)
+engaged <- ifelse(length(engaged)>0,engaged,0)
+potential <- ind_engagement%>%filter(ind_mira == "Potential")%>%pull(pct)
+potential <- ifelse(length(potential)>0,potential,0)
+disengaged <- ind_engagement%>%filter(ind_mira == "Disengaged")%>%pull(pct)
+disengaged <- ifelse(length(disengaged)>0,disengaged,0)
+
+
+##### individuální míra engagementu po odděleních
+
+ind_eng_odd <- final_long_df %>%
+  filter(group_title == "Engagement") %>%
+  group_by(respondent_id)%>%
+  mutate(
+    odpoved_hodnota = as.numeric(odpoved_hodnota),
+    prum_eng = mean(odpoved_hodnota),
+    ind_mira = case_when(
+      prum_eng <= 1.2 ~ "Engaged",
+      prum_eng > 1.2 & prum_eng <= 2.5 ~ "Potential",
+      prum_eng > 2.5 ~ "Disengaged"
+    )) %>%
+  left_join(odd_responses,by="respondent_id")%>%
+  ungroup() %>%
+  distinct(respondent_id,ind_mira,oddeleni)%>%
+  group_by(oddeleni,ind_mira) %>%
+  count(ind_mira,name="n") %>%
+  group_by(oddeleni)%>%
+  mutate(pct = round((n/sum(n))*100,1),
+         ind_mira = factor(ind_mira, levels = rev(individual_eng_order)))
+
+ind_odd_list <- split_depts(ind_eng_odd)
+
+ind_odd_pages = length(ind_odd_list)
+
+render_ind_odd_slides <- function(df_list, total_pages) {
+  if (length(df_list) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide eio-v2">',
+    '<div class="eio-header">',
+    '<p class="ei-kicker">Výsledky</p>',
+    '<h1 class="eio-title">Srovnání <span class="accent-teal">individuální míry engagementu</span> napříč odděleními</h1>',
+    '</div>',
+    '<div class="eio-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 13.4',
+    '#| fig-height: 7',
+    '#| fig-align: center',
+    '',
+    'df_page <- df_list[[{{i}}]]',
+    '',
+    'ggplot(df_page, aes(x = oddeleni, y = pct, fill = ind_mira)) +',
+    '  geom_col(position = position_stack(), width = 0.62) +',
+    '  geom_text(',
+    '    aes(label = ifelse(pct > 5, paste0(pct, "%"),"")),',
+    '    position = position_stack(vjust = 0.5),',
+    '    family = "Europa",',
+    '    fontface = "bold",',
+    '    size = 12',
+    '  ) +',
+    'scale_x_discrete(',
+    'labels = function(x) str_trunc(x, width = 20, side = "right", ellipsis = "...")',
+    ') +',
+    '  scale_fill_manual(values = colors_ind_mira) +',
+    '  theme_minimal(base_family = "Europa") +',
+    '  theme(',
+    '    panel.grid = element_blank(),',
+    '    panel.background = element_rect(fill = "transparent", colour = NA),',
+    '    plot.background = element_rect(fill = "transparent", colour = NA),',
+    '    axis.text.x = element_text(family = "Europa", face = "bold", size = 25, angle = 45),',
+    '    axis.text.y = element_blank(),',
+    '    axis.ticks = element_blank(),',
+    '    axis.title.x = element_blank(),',
+    '    axis.title.y = element_blank(),',
+    '    legend.position = "none",',
+    '    plot.margin = margin(t = 10, r = 86, b = 0, l = 10)',
+    '  )',
+    '```',
+    '</div>',
+    '{{arrow_html}}',
+    '<div class="eio-legend"><div class="eio-legend-label">Škála odpovědí</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Určitě ano = skóre 1</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Spíše ano = skóre 2</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Nemohu se rozhodnout = skóre 3</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Spíše ne = skóre 4</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Určitě ne = skóre 5</div></div></div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(df_list), function(i) {
+    arrow_html <- if (i < total_pages) {
+      '<div class="eio-next" aria-hidden="true"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"></div>'
+    } else {
+      ""
+    }
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      arrow_html = arrow_html
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+
+###############################################################################
+############# drivery 
+
+drivery_agg_order <- c("Skvělý výsledek","Průměrný výsledek","Špatný výsledek")
+
+drivery_overview <- final_long_df %>%
+  filter(group_title != params$demografie & group_title != "Engagement"
+         & typ_otazky == "opinion_scale") %>%
+  mutate(odpoved_kat = case_when(
+    odpoved_hodnota <= 2 ~ "Skvělý výsledek",
+    odpoved_hodnota == 3 ~ "Průměrný výsledek",
+    odpoved_hodnota > 3 ~ "Špatný výsledek"
+  ))%>%
+  group_by(group_title, odpoved_kat) %>%
+  summarise(n = n()) %>%
+  group_by(group_title) %>%
+  mutate(pct = round((n/sum(n))*100,1))
+
+
+drivery_sort <- drivery_overview %>%
+  filter(odpoved_kat == "Skvělý výsledek") %>%
+  arrange(desc(pct)) %>%
+  ungroup() %>%
+  mutate(poradi = row_number())
+
+drivery_overview_complete <- drivery_overview %>%
+  left_join(drivery_sort %>% select(group_title,poradi), by = "group_title") %>%
+  arrange(poradi) %>%
+  mutate(odpoved_kat = factor(odpoved_kat, levels=rev(drivery_agg_order)))
+
+drivery_overview_firma <- df_firma %>%
+  filter(group_title != params$demografie & group_title != "Engagement"
+         & typ_otazky == "opinion_scale") %>%
+  mutate(odpoved_kat = case_when(
+    odpoved_hodnota <= 2 ~ "SkvÄ›lĂ˝ vĂ˝sledek",
+    odpoved_hodnota == 3 ~ "PrĹŻmÄ›rnĂ˝ vĂ˝sledek",
+    odpoved_hodnota > 3 ~ "Ĺ patnĂ˝ vĂ˝sledek"
+  ))%>%
+  group_by(group_title, odpoved_kat) %>%
+  summarise(n = n(), .groups = "drop_last") %>%
+  mutate(pct = round((n/sum(n))*100,1)) %>%
+  ungroup()
+
+
+drivery_otazky <- final_long_df %>%
+  filter(group_title != params$demografie & group_title != "Engagement"
+         & typ_otazky == "opinion_scale") %>%
+  mutate(odpoved_kat = case_when(
+    odpoved_hodnota <= 2 ~ "Skvělý výsledek",
+    odpoved_hodnota == 3 ~ "Průměrný výsledek",
+    odpoved_hodnota > 3 ~ "Špatný výsledek"
+  ))%>%
+  group_by(group_title,otazka_title,odpoved_kat)%>%
+  summarise(n = n())%>%
+  group_by(otazka_title)%>%
+  mutate(pct = round((n/sum(n))*100,2))%>%
+  left_join(drivery_sort%>%select(group_title,poradi), by = "group_title")
+
+
+get_driver_results <- function(data,place){
+  data %>%
+    filter(poradi == place)
+}
+
+get_question_results <- function(data,place){
+  data %>%
+    filter(poradi==place)
+}
+
+
+driver_split <- split(drivery_overview_complete, drivery_overview_complete$poradi)
+question_split <- split(drivery_otazky, drivery_otazky$poradi)
+
+driver_list <- Map(function(driver,question){
+  list(
+    driver_result = driver,
+    question_result = question
+  )
+},driver_split,question_split)
+
+
+####### porovnání s benchmarky
+
+##### načtení benchmarků
+
+bench_form <- params$benchmarky
+
+bench_def <- get_form_definition(tf_token,bench_form)
+
+bench_responses <- get_responses_page(tf_token,bench_form)
+
+bench_all_responses <- get_all_responses(tf_token,bench_form)
+
+bench_data_preprocessed <- preprocess_data(bench_all_responses)
+
+bench_df_long <- dplyr::bind_rows(unlist(bench_data_preprocessed, recursive = FALSE))
+
+bench_ciselnik_list <- process_survey_ciselnik(bench_def)
+
+bench_ciselnik_df <- dplyr::bind_rows(bench_ciselnik_list)
+
+
+bench_df_complete <- bench_df_long %>%
+  left_join(bench_ciselnik_df, by = "otazka_ref")%>%
+  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota),
+         otazka_title = clean_text(otazka_title))
+
+
+###### jednotlivé benchmarky engagementu
+
+bench_cr_val <- bench_df_complete %>% filter(group_title == "Engagement" & otazka_title=="Česká republika")%>%
+  pull(odpoved_hodnota)
+
+bench_cr_name <- bench_df_complete %>% filter(group_title == "Engagement" & otazka_title=="Česká republika")%>%
+  pull(otazka_title)
+
+
+bench_us_val <- bench_df_complete %>% filter(group_title == "Engagement" & otazka_title=="USA")%>%
+  pull(odpoved_hodnota)
+
+bench_us_name <- bench_df_complete %>% filter(group_title == "Engagement" & otazka_title=="USA")%>%
+  pull(otazka_title)
+
+bench_ger_val <- bench_df_complete %>% filter(group_title == "Engagement" & otazka_title=="Německo")%>%
+  pull(odpoved_hodnota)
+
+bench_ger_name <- bench_df_complete %>% filter(group_title == "Engagement" & otazka_title=="Německo")%>%
+  pull(otazka_title)
+
+### aktuální výsledky vs benchmarky
+
+#drivery_clean <- drivery_otazky %>%
+#  mutate(otazka_title = str_squish(str_trim(otazka_title)))
+
+#bench_clean <- bench_df_complete %>%
+#  mutate(otazka_title = str_squish(str_trim(otazka_title)))
+
+drivery_benchmark <- drivery_otazky %>%
+  dplyr::select(otazka_title,odpoved_kat,pct)%>%
+  left_join(
+    bench_df_complete %>% select(otazka_title,odpoved_hodnota),
+    by = "otazka_title"
+  ) %>%
+  filter(odpoved_kat == "Skvělý výsledek")%>%
+  mutate(pod_benchmarkem = case_when(
+    odpoved_hodnota == NA ~ NA,
+    pct < odpoved_hodnota ~ TRUE,
+    pct >= odpoved_hodnota ~ FALSE
+  ))
+
+drivery_benchmark_firma <- drivery_overview %>%
+  filter(odpoved_kat == "Skvělý výsledek")%>%
+  select(group_title,pct)%>%
+  rename(`Aktuální průzkum` = pct)%>%
+  left_join(
+    bench_df_complete %>% dplyr::select(group_title,otazka_title,odpoved_hodnota),
+    by = "group_title"
+  )%>%
+  filter(!is.na(otazka_title))%>%
+  pivot_wider(names_from = otazka_title, values_from=odpoved_hodnota)%>%
+  left_join(drivery_sort %>% dplyr::select(group_title,poradi),
+            by = "group_title")%>%
+  arrange(poradi)%>%
+  dplyr::select(-poradi)
+
+
+include_horsi <- function(df){
+  if(any(df$pod_benchmarkem, na.rm = T)){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+driver_benchmark_company_values <- drivery_overview_firma %>%
+  filter(grepl("Skv", odpoved_kat)) %>%
+  select(group_title, pct) %>%
+  rename(Firma = pct)
+
+drivery_benchmark_report <- drivery_overview %>%
+  filter(grepl("Skv", odpoved_kat)) %>%
+  select(group_title, pct)
+
+names(drivery_benchmark_report)[names(drivery_benchmark_report) == "pct"] <- driver_benchmark_current_label
+
+drivery_benchmark_firma <- drivery_benchmark_report %>%
+  left_join(
+    bench_df_complete %>% dplyr::select(group_title,otazka_title,odpoved_hodnota),
+    by = "group_title"
+  )%>%
+  filter(!is.na(otazka_title))%>%
+  pivot_wider(names_from = otazka_title, values_from=odpoved_hodnota)
+
+if (is_department_report) {
+  drivery_benchmark_firma <- drivery_benchmark_report %>%
+    left_join(driver_benchmark_company_values, by = "group_title") %>%
+    left_join(
+      bench_df_complete %>% dplyr::select(group_title,otazka_title,odpoved_hodnota),
+      by = "group_title"
+    )%>%
+    filter(!is.na(otazka_title))%>%
+    pivot_wider(names_from = otazka_title, values_from=odpoved_hodnota)
+}
+
+drivery_benchmark_firma <- drivery_benchmark_firma %>%
+  left_join(drivery_sort %>% dplyr::select(group_title,poradi),
+            by = "group_title")%>%
+  arrange(poradi)%>%
+  dplyr::select(-poradi)
+
+horsi_vysledky_present <- include_horsi(drivery_benchmark)
+
+driver_benchmark_columns <- setdiff(names(drivery_benchmark_firma), "group_title")
+driver_benchmark_accent_column <- "Aktuální průzkum"
+
+driver_benchmark_columns <- setdiff(names(drivery_benchmark_firma), "group_title")
+driver_benchmark_accent_column <- driver_benchmark_current_label
+
+prepare_driver_benchmark_results_table <- function(benchmark_table, column_config) {
+  prepared_table <- benchmark_table %>%
+    rename(driver_name = group_title)
+
+  value_columns <- intersect(column_config, names(prepared_table))
+
+  prepared_table %>%
+    mutate(across(
+      all_of(value_columns),
+      ~ round(suppressWarnings(as.numeric(as.character(.x))))
+    )) %>%
+    distinct(driver_name, .keep_all = TRUE) %>%
+    select(driver_name, all_of(value_columns))
+}
+
+format_driver_benchmark_value <- function(value) {
+  if (length(value) == 0 || is.na(value)) {
+    return("")
+  }
+
+  numeric_value <- suppressWarnings(as.numeric(as.character(value)))
+  if (!is.na(numeric_value)) {
+    return(paste0(round(numeric_value), " %"))
+  }
+
+  as.character(value)
+}
+
+render_driver_benchmark_results <- function(table_df, column_config) {
+  if (nrow(table_df) == 0) {
+    return(invisible(NULL))
+  }
+
+  if (!"driver_name" %in% names(table_df)) {
+    stop("Driver benchmark results table must include a driver_name column.")
+  }
+
+  visible_columns <- intersect(column_config, names(table_df))
+  value_columns <- setdiff(visible_columns, "driver_name")
+
+  header_html <- paste0(
+    '<div class="dbr-row dbr-row-head">',
+    '<div></div>',
+    paste(
+      vapply(value_columns, function(col_name) {
+        paste0(
+          '<div class="dbr-head-cell',
+          if (identical(col_name, driver_benchmark_accent_column)) ' accent' else '',
+          '"><span class="angled">', htmltools::htmlEscape(col_name), '</span></div>'
+        )
+      }, character(1)),
+      collapse = ""
+    ),
+    '</div>'
+  )
+
+  body_html <- paste(
+    vapply(seq_len(nrow(table_df)), function(i) {
+      row_df <- table_df[i, , drop = FALSE]
+      paste0(
+        '<div class="dbr-row">',
+        '<div class="dbr-label">', htmltools::htmlEscape(row_df$driver_name[[1]]), '</div>',
+        paste(
+          vapply(value_columns, function(col_name) {
+            value <- row_df[[col_name]][[1]]
+            formatted_value <- format_driver_benchmark_value(value)
+            paste0(
+              '<div class="dbr-cell',
+              if (identical(col_name, driver_benchmark_accent_column)) ' accent' else '',
+              '">',
+              if (nzchar(formatted_value)) {
+                paste0('<strong>', htmltools::htmlEscape(formatted_value), '</strong>')
+              } else {
+                ""
+              },
+              '</div>'
+            )
+          }, character(1)),
+          collapse = ""
+        ),
+        '</div>'
+      )
+    }, character(1)),
+    collapse = "\n"
+  )
+
+  slide_html <- paste0(
+    '<div class="slide driver-bench-results-v2">',
+    '<div class="ei-kicker">Výsledky</div>',
+    '<div class="dbr-title">Srovnání driverů s relevantními <span class="accent-teal">benchmarky</span></div>',
+    '<div class="dbr-table" style="--dbr-col-count:', length(value_columns), ';">',
+    header_html,
+    body_html,
+    '</div>',
+    '</div>'
+  )
+
+  cat(slide_html)
+}
+
+driver_benchmark_results_table <- prepare_driver_benchmark_results_table(
+  drivery_benchmark_firma,
+  driver_benchmark_columns
+)
+
+
+
+
+```
+
+</div>
+
+
+<!----- Co nas ceka ---------->
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+progress_rectangles <- function(filled_rectangles, total_rectangles) {
+  total_rectangles <- as.integer(total_rectangles)
+  filled_rectangles <- as.integer(filled_rectangles)
+
+  rectangles <- rep('<span class="ghost"></span>', total_rectangles)
+
+  if (filled_rectangles > 0) {
+    rectangles[seq_len(min(filled_rectangles, total_rectangles))] <- '<span class="on"></span>'
+  }
+
+  paste(rectangles, collapse = "\n")
+}
+
+agenda_progress_total <- 8
+agenda_progress_filled <- 0
+section01_progress_total <- 8
+section01_progress_filled <- 1
+section02_progress_total <- 8
+section02_progress_filled <- 2
+section03_progress_total <- 8
+section03_progress_filled <- 3
+problematic_progress_total <- 8
+problematic_progress_filled <- 4
+multiple_choice_progress_total <- 8
+multiple_choice_progress_filled <- 5
+```
+
+
+<!----------- Co nás dnes čeká --------------------------------------->
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(stringr)
+
+# Example input booleans
+# mc_present <- TRUE
+# openend_present <- TRUE
+# horsi_vysledky_present <- FALSE
+
+agenda_vector <- c(horsi_vysledky_present, mc_present, openend_present)
+
+build_agenda <- function(x) {
+  
+  base_sections <- c(
+    "Průzkum v číslech",
+    "Výsledky engagementu",
+    "Výsledky jednotlivých driverů"
+  )
+  
+  optional_sections <- c()
+  
+  if (x[1]) {
+    optional_sections <- c(optional_sections, "Otázky, které dopadly hůře")
+  }
+  
+  if (x[2]) {
+    optional_sections <- c(optional_sections, "Multiple choice otázky")
+  }
+  
+  if (x[3]) {
+    optional_sections <- c(optional_sections, "Otevřené otázky")
+  }
+  
+  final_sections <- c(
+    "Co dělat s výsledky",
+    "Doprovodné grafy"
+  )
+  
+  if (!is_firma_report) {
+    final_sections <- final_sections[!grepl("Doprovod", final_sections)]
+  }
+
+  sections <- c(base_sections, optional_sections, final_sections)
+  
+  list(
+    sections = sections,
+    total_sections = length(sections),
+    progress_total = length(sections)
+  )
+}
+
+make_agenda_items <- function(sections) {
+  items <- character(length(sections))
+  
+  for (i in seq_along(sections)) {
+    items[i] <- sprintf(
+      paste0(
+        '<li class="agenda-item">',
+        '<span class="agenda-num">%02d</span>',
+        '<span class="agenda-text">%s</span>',
+        '</li>'
+      ),
+      i,
+      sections[i]
+    )
+  }
+  
+  paste(items, collapse = "\n")
+}
+
+progress_rectangles <- function(filled_rectangles, total_rectangles) {
+  total_rectangles <- as.integer(total_rectangles)
+  filled_rectangles <- as.integer(filled_rectangles)
+
+  rectangles <- rep('<span class="ghost"></span>', total_rectangles)
+
+  if (filled_rectangles > 0) {
+    rectangles[seq_len(min(filled_rectangles, total_rectangles))] <- '<span class="on"></span>'
+  }
+
+  paste(rectangles, collapse = "\n")
+}
+
+agenda_cfg <- build_agenda(agenda_vector)
+
+agenda_progress_total <- agenda_cfg$progress_total
+agenda_progress_filled <- 0
+
+get_progress <- function(agenda_cfg, section_name) {
+  pos <- match(section_name, agenda_cfg$sections)
+  list(
+    filled = pos,
+    total = agenda_cfg$progress_total
+  )
+}
+
+get_section_badge <- function(agenda_cfg, section_name) {
+  sprintf("%02d", match(section_name, agenda_cfg$sections))
+}
+```
+
+<div class="slide agenda-slide section-slide--pvc"> 
+<div class="section-left-bleed" aria-hidden="true"></div>
+<div class="section-right-bleed" aria-hidden="true"></div>
+<div class="section-bottom-bleed" aria-hidden="true"></div>
+<div class="agenda-content"> 
+<div class="agenda-title">Co nás dnes čeká</div> 
+<ul class="agenda-list">
+
+```{r} 
+#| echo: false 
+#| results: asis
+
+cat(make_agenda_items(agenda_cfg$sections))
+```
+</ul>
+
+<div class="scv-progress">
+```{r}
+#| echo: false
+#| results: asis
+
+cat(progress_rectangles(agenda_progress_filled, agenda_progress_total))
+```
+</div>
+
+</div>
+</div>
+
+
+<!---- Průzkum v číslech sekce ----->
+
+<div class="slide section-slide section-slide--pvc">
+
+<div class="section-left-bleed" aria-hidden="true"></div>
+<div class="section-right-bleed" aria-hidden="true"></div>
+<div class="section-bottom-bleed" aria-hidden="true"></div>
+
+<div class="section-number">01</div>
+
+<div class="section-title">Průzkum v číslech</div>
+
+<div class="section-description">
+Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě.
+Ukážeme Vám např. kolik zaměstnanců se průzkumu zúčastnilo celkově,
+za jednotlivé organizační jednotky nebo podle demografických údajů.
+</div>
+
+<div class="scv-progress">
+```{r}
+#| echo: false
+#| results: asis
+
+pvc_progress <- get_progress(agenda_cfg, "Průzkum v číslech")
+
+cat(progress_rectangles(pvc_progress$filled, pvc_progress$total))
+```
+</div>
+
+</div>
+
+
+
+<!-------- Průzkum v číslech výsledky --------------->
+
+```{r}
+#| echo: false
+#| results: asis
+
+if (is_department_report) {
+  cat('<style>.survey-numbers-slide .company-only{display:none !important;}</style>')
+}
+```
+
+<div class="slide survey-numbers-slide">
+
+<div class="survey-title">Průzkum v číslech</div>
+
+<!-- Základní info -->
+<div class="survey-kpis">
+
+<div class="survey-kpi-block">
+
+<div>
+<span class="survey-kpi-number">`r navratnost`</span>
+<span class="survey-kpi-unit">%</span>
+</div>
+<div class="survey-kpi-text">
+je číslo, které odpovídá celkové návratnosti odpovědí od vašich zaměstnanců.
+</div>
+</div>
+
+
+<div class="survey-kpi-block">
+<div>
+<span class="survey-kpi-number">`r avg_doba_vyplneni`</span>
+<span class="survey-kpi-unit">minut</span>
+</div>
+<div class="survey-kpi-text">
+trvalo průměrně vyplnění dotazníku.
+</div>
+</div>
+
+
+<div class="survey-kpi-block company-only">
+<div>
+<span class="survey-kpi-number">`r pocet_resp`</span>
+<span class="survey-kpi-unit">lidí</span>
+</div>
+<div class="survey-kpi-text">
+ve vaší firmě odpovědělo na průzkum.
+</div>
+</div>
+
+</div>
+
+<!-- Prostřední grafy -->
+
+<div class="survey-main company-only">
+<div>
+<div class="survey-box">
+<div class="survey-box-title">Respondenti podle oddělení</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 4
+#| fig-align: center
+
+ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
+  geom_col(width = .8, position = "dodge")+
+  geom_text(aes(label = Pocet), 
+            position = position_dodge(width = .8),
+            family = "Europa",
+            fontface = "bold", size = 6,
+            vjust = -.3)+
+  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      family = "Europa", face = "plain", size = 20, angle = 60, 
+      vjust = .5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    panel.background = element_blank(),
+    legend.text = element_text(
+      family = "Europa", face = "plain", size = 20
+    )
+  )+
+  scale_fill_manual(values = c("pocet_respondentu" = "#63E8C6","pocet_zamestnancu" = "#D1D1D1"),
+                    labels = c("Počet respondentů", "Počet zaměstnanců"))
+```
+</div>
+</div>
+
+<div>
+<div class="survey-box">
+<div class="survey-box-title">Respondenti podle věku</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 2
+#| fig-align: center
+
+ggplot(vek_souhrn, aes(x = vek, y = pocet))+
+  geom_col(fill = "#63E8C6", width = .9, position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface = "bold", 
+            size = 6, vjust = -.3)+
+  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.text.x = element_text(
+      Family = "Europa", size = 20
+    )
+  )
+
+
+```
+</div>
+</div>
+</div>
+
+  <!-- Grafy pozice a seniorita -->
+<div class="survey-right company-only">
+
+<div class="survey-right-box">
+<div class="survey-box-title">Pracovní pozice</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 4
+
+### pozice
+
+
+ggplot(pozice_souhrn, aes(pozice, pocet))+
+  geom_col(width = .5, fill = "#63E8C6", position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface= "bold", size = 12, hjust = 1.1)+
+  coord_flip()+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      family = "Europa", size = 35
+    )
+    
+  )
+
+
+```
+</div>
+
+<div class="survey-right-box">
+<div class="survey-box-title">Délka působení ve firmě</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-height: 5
+
+### doba ve firmě
+
+ggplot(doba_souhrn, aes(doba, pocet))+
+  geom_col(width = .5, fill = "#ff67aa", position = "dodge")+
+  geom_text(aes(label = pocet), 
+            family = "Europa", fontface = "bold", size = 12, hjust = 1.1)+
+  coord_flip()+
+  theme(
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(
+      family = "Europa", size = 35
+    )
+    
+  )
+
+
+```
+</div>
+
+</div>
+
+
+</div>
+
+
+
+<!-------- Výsledky engagementu oddělovač sekce ------------->
+
+
+<div class="slide section-slide section-slide--pvc">
+
+<div class="section-left-bleed" aria-hidden="true"></div>
+<div class="section-right-bleed" aria-hidden="true"></div>
+<div class="section-bottom-bleed" aria-hidden="true"></div>
+
+<div class="section-number">02</div>
+
+<div class="section-title">Výsledky engagementu</div>
+
+<div class="section-description">
+<p>
+Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk dokáže do své práce ponořit, jak pro svou práci/ firmu/kolegy udělá o krok navíc či jednoduše, jak moc jej práce baví a těší.
+</p>
+
+<p>
+Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdílných metrik – Engagement indexu a Individuální míry engagementu. Výpočet obou metrik Vám dále vysvětlíme a odprezentujeme.
+</p>
+
+</div>
+
+<div class="scv-progress">
+```{r}
+#| echo: false
+#| results: asis
+
+eng_progress <- get_progress(agenda_cfg, "Výsledky engagementu")
+
+cat(progress_rectangles(eng_progress$filled, eng_progress$total))
+```
+</div>
+
+</div>
+
+
+<!-- Metriky engagementu ---->
+<div class="slide metrics-slide">
+<div class="content-wrapper">
+<div class="header-block">
+<div class="section-title">Metriky engagementu</div>
+<div class="section-description">
+Jedna metrika vám ukáže, jak dobře vycházejí jednotlivé oblasti engagementu. Druhá vám ukáže, kolik lidí je skutečně zapojených. Teprve kombinace obou pohledů dává smysl. Může se stát, že celkové skóre nevypadá špatně, ale ve skutečnosti jen menší část lidí je opravdu plně zapojená. Nebo naopak – lidé mají silný vztah ke své práci, ale slabší k zaměstnavateli. Použití obou metrik je proto důležitý „double check“. Pomáhá odhalit nerovnováhu a dává přesnější základ pro rozhodování
+</div>
+</div>
+<div class="metrics-grid">
+<div class="metric-column">
+<span class="metric-number">01</span>
+<div class="metric-title">Engagement index</div>
+<div class="metric-description">
+Engagement index ukazuje, jak silně vycházejí jednotlivé oblasti engagementu napříč firmou. Sleduje podíl nejvíce pozitivních odpovědí u čtyř klíčových otázek – dvou zaměřených na vztah k práci a dvou na vztah k zaměstnavateli. Nezaměřuje se na jednotlivce, ale na celkový obraz. Odpovídá na otázku: Jak si stojíme jako firma v oblastech, které tvoří engagement?
+</div>
+</div>
+<div class="metric-column">
+<span class="metric-number">02</span>
+<div class="metric-title">Individuální míra engagementu</div>
+<div class="metric-description">
+<p>Individuální míra engagementu se dívá na každého respondenta zvlášť. Podle kombinace jeho odpovědí určuje, zda patří mezi plně zapojené, částečně zapojené nebo odpojené zaměstnance. Výsledkem je jasný přehled o tom, kolik lidí je skutečně „na palubě“ a kolik je jen částečně nebo vůbec. Odpovídá na otázku: Kolik lidí je opravdu zapojených – a kolik ne?</p>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(tibble)
+
+mock_scale_cols <- c(
+  "Rozhodne ano" = "#63E8C6",
+  "Spise ano" = "#A8F2DE",
+  "Ani ano, ani ne" = "#BFC4CA",
+  "Spise ne" = "#FF8ADE",
+  "Rozhodne ne" = "#FF67AA"
+)
+
+mock_engagement_breakdown <- tibble(
+  response = factor(
+    c("Rozhodne ano", "Spise ano", "Ani ano, ani ne", "Spise ne", "Rozhodne ne"),
+    levels = c("Rozhodne ano", "Spise ano", "Ani ano, ani ne", "Spise ne", "Rozhodne ne")
+  ),
+  pct = c(48, 26, 14, 8, 4)
+)
+
+mock_benchmark <- tibble(
+  group = factor(
+    c("Firma", "Benchmark"),
+    levels = c("Firma", "Benchmark")
+  ),
+  score = c(74, 68)
+)
+
+mock_eng_questions <- tibble(
+  area = factor(
+    c("Smysl", "Vztahy", "Vybaveni", "Uznani", "Rust"),
+    levels = c("Smysl", "Vztahy", "Vybaveni", "Uznani", "Rust")
+  ),
+  "Rozhodne ano" = c(42, 45, 39, 35, 38),
+  "Spise ano" = c(31, 28, 30, 29, 27),
+  "Ani ano, ani ne" = c(14, 13, 16, 17, 16),
+  "Spise ne" = c(8, 9, 9, 11, 10),
+  "Rozhodne ne" = c(5, 5, 6, 8, 9)
+)
+
+mock_departments_1 <- tibble(
+  dept = factor(c("Marketing", "Obchod", "Vyroba"), levels = c("Marketing", "Obchod", "Vyroba")),
+  "Rozhodne ano" = c(47, 41, 34),
+  "Spise ano" = c(29, 30, 31),
+  "Ani ano, ani ne" = c(13, 15, 18),
+  "Spise ne" = c(7, 9, 10),
+  "Rozhodne ne" = c(4, 5, 7)
+)
+
+mock_departments_2 <- tibble(
+  dept = factor(c("HR", "Finance", "IT"), levels = c("HR", "Finance", "IT")),
+  "Rozhodne ano" = c(52, 44, 37),
+  "Spise ano" = c(25, 28, 29),
+  "Ani ano, ani ne" = c(12, 14, 17),
+  "Spise ne" = c(7, 8, 10),
+  "Rozhodne ne" = c(4, 6, 7)
+)
+
+mock_departments_3 <- tibble(
+  dept = factor(c("Logistika", "QA", "Back office"), levels = c("Logistika", "QA", "Back office")),
+  "Rozhodne ano" = c(36, 40, 46),
+  "Spise ano" = c(30, 29, 27),
+  "Ani ano, ani ne" = c(18, 15, 13),
+  "Spise ne" = c(10, 10, 9),
+  "Rozhodne ne" = c(6, 6, 5)
+)
+```
+
+
+<!-- Jak cist? Engagement index -->
+<div class="slide jakcist-slide jakcist--engindex">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">Jak číst?</div>
+<div class="jakcist-header-sub">Engagement index</div>
+</div>
+<div class="jakcist-q q1">?</div>
+<div class="jakcist-q q2">?</div>
+<div class="jakcist-q q3">?</div>
+</div>
+<div class="jakcist-content">
+<p class="jakcist-lead">
+Engagement index ukazuje, jak silně vycházejí klíčové oblasti engagementu napříč firmou. Sleduje podíl nejvíce pozitivních odpovědí u čtyř základních otázek – dvou ke vztahu k práci a dvou ke vztahu k zaměstnavateli. Nehodnotí jednotlivce, ale celkový obraz firmy. Pomáhá rychle pochopit, jak pevný je základ engagementu.
+</p>
+<div class="jakcist-main">
+<div class="jakcist-card">
+<div class="jakcist-card-title">Engagement index za firmu</div>
+<div class="jakcist-kpis">
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Úplný engagement</div>
+<div class="jakcist-kpi-value accent-teal">42 %</div>
+<p class="jakcist-kpi-desc">Úplný engagement za firmu = 42 %. To znamená, že 42 % <b>odpovědí na všechny engagementové otázky bylo Určitě ano.</b></p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Částečný engagement</div>
+<div class="jakcist-kpi-value accent-grey">33 %</div>
+<p class="jakcist-kpi-desc">Částečný engagement za firmu = 33 %. To znamená, že 33 % <b>odpovědí na všechny engagementové otázky bylo Spíše ano nebo Nemohu se rozhodnout.</b></p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Slabý engagement</div>
+<div class="jakcist-kpi-value accent-pink">25 %</div>
+<p class="jakcist-kpi-desc">Slabý engagement za firmu = 25 %. To znamená, že 25 % <b>odpovědí na všechny engagementové otázky bylo Spíše ne nebo Určitě ne.</b></p>
+</div>
+</div>
+</div>
+
+<div class="jakcist-right">
+<div class="jakcist-right-title">Engagement index se měří následujícími otázkami:<br><br></div>
+<div class="jakcist-kpi-title">Jsem spokojený/á s náplní své práce.<br></div>
+<div class="jakcist-kpi-title">Má práce mě baví.<br></div>
+<div class="jakcist-kpi-title">Moje práce mi dává smysl.<br></div>
+<div class="jakcist-kpi-title">Jsem hrdý/á na práci, kterou ve firmě dělám.<br></div>
+
+
+<!-- div class="jakcist-bar" --->
+<!-- div class="jakcist-bar-seg teal" style="width:26%"><span>26 %</span></div --->
+<!-- div class="jakcist-bar-seg grey" style="width:58%"><span>58 %</span></div -->
+<!-- div class="jakcist-bar-seg pink" style="width:16%"><span>16 %</span></div -->
+</div>
+</div>
+
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">Škála odpovědí</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Určitě ano</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Spíše ano</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Spíše ne</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Určitě ne</div>
+</div>
+</div>
+</div>
+
+
+<!-- Jak cist? Individualni mira engagementu -->
+<div class="slide jakcist-slide jakcist--individual">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">Jak číst?</div>
+<div class="jakcist-header-sub">Individuální míra engagementu</div>
+</div>
+<div class="jakcist-q q1">?</div>
+<div class="jakcist-q q2">?</div>
+<div class="jakcist-q q3">?</div>
+</div>
+<div class="jakcist-content">
+<p class="jakcist-lead">
+Individuální míra engagementu ukazuje, kolik lidí ve firmě je skutečně plně zapojených, kolik je zapojených částečně a kolik je odpojených. Každý zaměstnanec je zařazen podle kombinace svých odpovědí na čtyři engagementové otázky. Výsledkem je jasná struktura firmy podle míry zapojení lidí. Tato metrika odpovídá na otázku: Kolik lidí je opravdu „na palubě“?
+</p>
+<div class="jakcist-main">
+<div class="jakcist-card">
+<div class="jakcist-card-title">Individuální míra engagementu</div>
+<div class="jakcist-kpis">
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Engaged</div>
+<div class="jakcist-kpi-value accent-teal">42 %</div>
+<p class="jakcist-kpi-desc">42 % engaged zaměstnanců = kolik % zaměstnanců spadá do kategorie engaged. Engaged zaměstnanec je každý, kdo má průměrné skóre engagementových otázek 1,2 a méně.</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Potentials</div>
+<div class="jakcist-kpi-value accent-grey">33 %</div>
+<p class="jakcist-kpi-desc">33 % potential zamestnancu = kolik % zaměstnanců spadá do kategorie engaged. Engaged zaměstnanec je každý, kdo má pruměrné skóre engagementových otázek mezi 1,2 a 2,5.</p>
+</div>
+<div class="jakcist-kpi">
+<div class="jakcist-kpi-title">Disengaged</div>
+<div class="jakcist-kpi-value accent-pink">25 %</div>
+<p class="jakcist-kpi-desc">25 % disengaged zaměstnanců = kolik % zaměstnanců spadá do kategorie disengaged. Engaged zaměstnanec je každý, kdo má pruměrné skóre engagementových otázek 2,5 a více.</p>
+</div>
+</div>
+</div>
+<div class="jakcist-right">
+<div class="jakcist-right-title">Příklad:</div>
+<p class="jakcist-example">Respondent odpovědel na engagementové otázky:<br><em>Určitě ano, Určitě ano, Spíše ano, Spíše ano.</em></p>
+<p class="jakcist-example">Jeho/její průměr = (1+1+2+2)/4 = <strong>1,5</strong><br>Respondent patří mezi potential zaměstnance.</p>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">Škála odpovědí</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Určitě ano = skóre 1</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spíše ano = skóre 2</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skóre 3</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spíše ne = skóre 4</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Určitě ne = skóre 5</div>
+</div>
+</div>
+</div>
+
+
+<!-- Engagement index benchmark -->
+<div class="slide engindex-slide">
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">Engagement index <span class="accent-teal">`r report_scope_title`</span></h1>
+<p class="ei-subtitle">v porovnání s benchmarky</p>
+</div>
+<div class="ei-main">
+<div class="ei-card">
+<div class="ei-card-title">Engagement index `r report_scope_title`</div>
+<div class="ei-kpis">
+<div class="ei-kpi">
+<p class="ei-kpi-head">Úplný engagement</p>
+<p class="ei-kpi-value accent-teal">`r uplny_engagement` %</p>
+<p class="ei-kpi-desc">Zaměstnanci vykazují silný a konzistentní pozitivní vztah ke své práci i zaměstnavateli. Ve většině odpovědí jasně potvrzují vysokou míru zapojení.
+Je zde vysoká pravděpodobnost nadstandardního výkonu a ochoty jít nad rámec povinností. Lidé jsou vnitřně motivovaní a firmu vnímají jako správné místo pro sebe. Tato úroveň vytváří stabilní základ pro výkon i dlouhodobou loajalitu.</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">Částečný engagement</p>
+<p class="ei-kpi-value accent-grey">`r castecny_engagement` %</p>
+<p class="ei-kpi-desc">Zaměstnanci jsou zapojení, ale jejich vztah k práci nebo firmě není plně stabilní. V některých oblastech fungují velmi dobře, jinde je viditelná nejistota nebo rezervy. Výkon bývá solidní, ale nemusí být dlouhodobě udržitelný bez další podpory. Tato skupina je citlivá na změny prostředí a kvalitu vedení. Při správném zaměření rozvoje má vysoký potenciál posunout se do plného engagementu.</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">Slabý engagement</p>
+<p class="ei-kpi-value accent-pink">`r slaby_engagement` %</p>
+<p class="ei-kpi-desc">Zaměstnanci vykazují nízkou míru pozitivního vztahu k práci nebo zaměstnavateli.Objevuje se odstup, nižší motivace nebo minimální ochota investovat energii navíc.Výkon může být kolísavý nebo čistě „na nutné minimum“. Rizikem je vyšší fluktuace nebo negativní vliv na týmové prostředí. Tato úroveň vyžaduje rychlou pozornost a cílené manažerské zásahy.</p>
+</div>
+</div>
+</div>
+<div class="ei-bench">
+<div class="ei-card-title">Benchmarky: </div>
+`r if (is_department_report) sprintf('<div class="ei-bench-item"><div class="ei-bench-value">%s %%</div><div class="ei-kpi-head">Firma</div></div>', uplny_engagement_firma) else ""`
+<div class="ei-bench-item"><div class="ei-bench-value">`r bench_cr_val` %</div><div class="ei-kpi-head">`r bench_cr_name`</div></div>
+<div class="ei-bench-item"><div class="ei-bench-value">`r bench_us_val` %</div><div class="ei-kpi-head">`r bench_us_name`</div></div>
+<div class="ei-bench-item"><div class="ei-bench-value">`r bench_ger_val` %</div><div class="ei-kpi-head">`r bench_ger_name`</div></div>
+</div>
+</div>
+<div class="ei-legend">
+<div class="ei-legend-label">Škála odpovědí</div>
+<div class="ei-legend-items">
+<div class="ei-legend-item"><i class="ei-swatch teal"></i>Určitě ano</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Spíše ano</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Nemohu se rozhodnout</div>
+<div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Spíše ne</div>
+<div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Určitě ne</div>
+</div>
+</div>
+</div>
+
+
+<!-- Engagement index across all questions -->
+<div class="slide engindex-firma-ref">
+<div class="ef-top">
+<div>
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ef-title">Engagement index <span class="accent-teal">`r report_scope_title`</span></h1>
+</div>
+<div class="ef-right-head" style="padding-top: 64px;">Engagement se měřil následujícími otázkami:</div>
+</div>
+<div class="ef-main">
+<div class="ef-left">
+<div class="ef-text-block">
+<p>
+První dvě engagementové otázky se zaměřují na vztah zaměstnance k jeho vlastní práci. Sledují, zda lidé vnímají svou práci jako smysluplnou, motivující a zda jsou ochotni do ní investovat energii navíc. Tato oblast ukazuje osobní zapojení do každodenního výkonu. Pokud je zde skóre vysoké, lidé chtějí svou práci dělat dobře bez ohledu na okolnosti. Pokud je nízké, problém se týká samotné náplně práce, role nebo vnitřní motivace.
+</p>
+<div class="ef-brace"><img src="visuals/brace.svg" alt="" class="ef-brace-img"></div>
+</div>
+<div class="ef-text-block">
+<p>
+Druhé dvě engagementové otázky se zaměřují na vztah zaměstnance k firmě jako zaměstnavateli. Sledují míru důvěry, sounáležitosti a ochotu spojit s organizací svou budoucnost. Tato oblast ukazuje, zda lidé stojí za firmou jako celkem – nejen za svou vlastní prací. Vysoké skóre znamená silnou loajalitu a identifikaci s firmou. Nízké skóre naopak signalizuje riziko odchodu nebo vnitřního odstupu, i když samotná práce může zaměstnance bavit.
+</p>
+<div class="ef-brace"><img src="visuals/brace.svg" alt="" class="ef-brace-img"></div>
+</div>
+</div>
+
+<div class="ef-right">
+<div class="ef-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 7.1
+#| fig-height: 6.8
+
+colors_eng <- c("Úplný engagement" = "#63E8C6", "Částečný engagement" = "#c5c5c5", 
+            "Slabý engagement" = "#ff67aa")
+
+colors_ind_mira <- c("Engaged" = "#63E8C6", "Potential" = "#c5c5c5", 
+            "Disengaged" = "#ff67aa")
+
+
+labels_df <- engagement_index_otazky %>%
+  group_by(otazka_title) %>%
+  summarise(total = 50)
+
+ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_engagementu))+
+  geom_col(position = position_stack(),width = 0.25)+
+  geom_text(
+      aes(label = ifelse(pct > 4.5, paste0(pct, "%"),"")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+  geom_text(
+    data = labels_df,
+    aes(x = otazka_title, y = total, label = otazka_title),  # +2 = spacing
+    inherit.aes = FALSE,
+    #position = position_nudge(x=-.5),
+    hjust=.5,
+    vjust=-2,
+    family = "Europa",
+    fontface = "bold",
+    size = 12
+  )+
+  scale_fill_manual(values = colors_eng)+
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_blank(),#element_text(family = "Europa",face = "bold", size = 25),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )+
+  coord_flip()
+```
+</div>
+</div>
+</div>
+<div class="ef-legend">
+<div class="ef-legend-label">Škála odpovědí</div>
+<div class="ef-legend-items">
+<div class="ef-legend-item"><i class="ef-swatch teal"></i>Určitě ano</div>
+<div class="ef-legend-item"><i class="ef-swatch grey2"></i>Spíše ano</div>
+<div class="ef-legend-item"><i class="ef-swatch grey2"></i>Nemohu se rozhodnout</div>
+<div class="ef-legend-item"><i class="ef-swatch pinkStrong"></i>Spíše ne</div>
+<div class="ef-legend-item"><i class="ef-swatch pinkStrong"></i>Určitě ne</div>
+</div>
+</div>
+</div>
+
+<!-- Individualni mira engagementu -->
+<div class="slide engindex-slide indeng-slide">
+<div class="ei-header">
+<p class="ei-kicker">Výsledky</p>
+<h1 class="ei-title">Individuální míra engagementu <span class="accent-teal">`r report_scope_title`</span></h1>
+</div>
+<div class="ei-main indeng-main">
+<div class="ei-card">
+<div class="ei-card-title">Individuální míra engagementu `r report_scope_title`</div>
+<div class="ei-kpis">
+<div class="ei-kpi">
+<p class="ei-kpi-head">Engaged</p>
+<p class="ei-kpi-value accent-teal">`r engaged` %</p>
+<p class="ei-kpi-desc">Tito zaměstnanci mají silný vztah ke své práci i k zaměstnavateli. Cítí smysl v tom, co dělají, a firmu vnímají jako správné místo pro sebe. Jsou ochotni investovat energii navíc a přirozeně podporují výkon týmu. Často působí jako stabilizační prvek v náročnějších obdobích. Představují klíčovou skupinu pro dlouhodobý úspěch organizace.</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">Potentials</p>
+<p class="ei-kpi-value accent-grey">`r potential` %</p>
+<p class="ei-kpi-desc">Tito zaměstnanci nejsou odpojení, ale jejich vztah není plně pevný. Mohou být spokojeni s prací, ale méně s firmou – nebo naopak. Jejich výkon bývá stabilní, ale bez výrazného nadšení. Jsou citlivější na změny, styl vedení nebo pracovní podmínky. Při správné práci s nimi mají vysoký potenciál posunout se do plného engagementu.</p>
+</div>
+<div class="ei-kpi">
+<p class="ei-kpi-head">Disengaged</p>
+<p class="ei-kpi-value accent-pink">`r disengaged` %</p>
+<p class="ei-kpi-desc">Tito zaměstnanci vykazují nízkou míru zapojení k práci, firmě nebo oběma oblastem. Často fungují pouze na úrovni základních povinností. Může se objevovat frustrace, odstup nebo nedůvěra. Je zde vyšší riziko poklesu výkonu nebo odchodu z organizace. Tato skupina vyžaduje rychlé porozumění příčinám a cílený zásah.</p>
+</div>
+</div>
+</div>
+</div>
+
+<div class="ei-legend">
+<div class="ei-legend-label">Škála odpovědí</div>
+<div class="ei-legend-items">
+<div class="ei-legend-item"><i class="ei-swatch teal"></i>Určitě ano = skóre 1</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Spíše ano = skóre 2</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Nemohu se rozhodnout = skóre 3</div>
+<div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Spíše ne = skóre 4</div>
+<div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Určitě ne = skóre 5</div>
+</div>
+</div>
+
+</div>
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_eng_odd_slides(eng_odd_list, eng_odd_pages)
+}
+```
+
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_ind_odd_slides(ind_odd_list, ind_odd_pages)
+}
+```
+
+
+
+<!-- Drivery engagementu oddelovac sekce -->
+<div class="slide section-slide section-slide--pvc">
+<div class="section-left-bleed" aria-hidden="true"></div>
+<div class="section-right-bleed" aria-hidden="true"></div>
+<div class="section-bottom-bleed" aria-hidden="true"></div>
+<div class="section-number">03</div>
+<div class="section-title">Výsledky klíčových driverů</div>
+<div class="section-description">
+Engagement neexistuje ve vakuu. Výsledky engagementu mohou být značně ovlivněny různými klíčovými tématy, tzv. drivery engagementu.
+Moduly zařazené do průzkumu jsou aktuálními daty podložené významné drivery engagementu.
+</div>
+<div class="scv-progress">
+```{r}
+#| echo: false
+#| results: asis
+
+dri_progress <- get_progress(agenda_cfg, "Výsledky jednotlivých driverů")
+
+cat(progress_rectangles(dri_progress$filled, dri_progress$total))
+```
+</div>
+</div>
+
+<!------------ Sledovane drivery ----------------->
+
+<div class="slide drivers-list-v3">
+<div class="drv3-title">Měřené/sledované <span class="accent-teal">drivery</span></div>
+<div class="drv3-lead">
+Diky neustálému sledování trendů v oblasti engagementu a analýze našich dat jsme vybrali moduly, které jsou podle nás nejvýznamnějšími drivery engagementu. Pojďme si je teď podrobněji představit
+</div>
+<div class="drv3-grid">
+<div class="drv3-item">
+<div class="drv3-item-title">Já a práce</div>
+<div class="drv3-item-text">
+Tento driver se zaměřuje na to, jak zaměstnanec vnímá svou každodenní práci. Sleduje, zda má dostatek zdrojů, jasné procesy a podmínky pro kvalitní výkon. Zahrnuje také míru samostatnosti, iniciativy a možnosti ovlivnit své pracovní prostředí. Ukazuje, zda práce dává smysl a umožňuje lidem být efektivní. Nízké skóre často signalizuje překážky v systému, nejasné role nebo nedostatek podpory.​</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Já a rozvoj</div>
+<div class="drv3-item-text">
+Tento driver se zaměřuje na možnosti růstu a učení. Sleduje, zda mají zaměstnanci příležitost rozvíjet své dovednosti a posouvat se dál. Zahrnuje kvalitu zpětné vazby, podporu rozvoje i jasnost kariérních možností. Ukazuje, zda lidé vidí ve firmě perspektivu. Nízké skóre může znamenat stagnaci, nejasné očekávání nebo nedostatek podpory v růstu.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Já a firma</div>
+<div class="drv3-item-text">
+Tento driver sleduje vztah zaměstnance k organizaci jako celku. Zahrnuje důvěru ve směřování firmy, srozumitelnost cílů a kvalitu interní komunikace. Zaměřuje se také na hodnoty a míru sounáležitosti. Ukazuje, zda lidé firmě věří a chtějí s ní spojit svou budoucnost. Nízké skóre může naznačovat nejistotu, slabou komunikaci nebo oslabenou loajalitu.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Já a výkon</div>
+<div class="drv3-item-text">Tento driver sleduje, jak jasně jsou nastavené cíle, očekávání a standardy výkonu. Zaměřuje se na to, zda lidé vědí, co se od nich očekává a jak jejich práce přispívá k výsledkům firmy. Zahrnuje také spravedlivost hodnocení a zpětnou vazbu k výkonu. Ukazuje, zda systém podporuje vysoký výkon. Nízké skóre často signalizuje nejasné priority nebo slabé řízení výkonu.</div>
+</div>
+<div class="drv3-item">
+<div class="drv3-item-title">Já a vedoucí</div>
+<div class="drv3-item-text">Tento driver hodnotí kvalitu vztahu mezi zaměstnancem a jeho přímým nadřízeným. Sleduje důvěru, podporu, otevřenost a schopnost vedoucího dávat směr. Zahrnuje také férovost rozhodování a schopnost řešit problémy. Ukazuje, zda vedení posiluje motivaci a stabilitu týmu. Nízké skóre může znamenat slabou komunikaci, nedostatek podpory nebo nejistotu v řízení.</div>
+</div>
+</div>
+</div>
+
+<!----------- Prezentace driveru ------------------->
+
+<div class="slide drivers-present-v3">
+<div class="dpv3-title"><span class="accent-teal">Prezentace</span> driverů</div>
+<div class="dpv3-intro">
+Data z driverů prezentujeme na čtyřech úrovních detailu, od <strong>obecných souhrnů až po podrobné analýzy.</strong>
+</div>
+<div class="dpv3-top">
+<div class="dpv3-text">
+<span class="accent-teal"><strong>První dvě úrovně</strong></span> <strong>(Obecný souhrn)</strong> se zaměřují na odpovědi agregované do širších kategorií (skvělý, průměrný, slabý výsledek). Agregované odpovědi nejprve porovnáme s externími benchmarky a poté zmapujeme situaci uvnitř firmy.
+</div>
+<div class="dpv3-text">
+<span class="accent-teal"><strong>Další dvě úrovně</strong></span> <strong>(Podrobné analýzy)</strong> se zaměřují na detailní rozložení odpovědí. Na třetí úrovni uvidíte procentuální podíl odpovědí na každou otázku – od „Určitě ano“ po „Určitě ne“ – na úrovni celé firmy. Čtvrtá úroveň pak ukáže, jak se odpovědi rozdělují mezi jednotlivé organizační jednotky.S každým krokem získáte hlubší přehled o dění ve firmě.
+</div>
+</div>
+<div class="dpv3-divider">
+<div class="dpv3-left-title">Obecný souhrn</div>
+<div class="dpv3-right-title">Podrobné analýzy</div>
+</div>
+<div class="dpv3-bottom">
+<div class="dpv3-block dpv3-block-left">
+<div class="dpv3-label">Agregace:</div>
+<div class="dpv3-copy"><strong>Skvělý výsledek</strong> = Určitě ano a Spíše ano,<br><strong>Průměrný výsledek</strong> = Nemohu se rozhodnout,<br><strong>Slabý výsledek</strong> = Určitě ne, Spíše ne</div>
+</div>
+<div class="dpv3-block dpv3-block-right">
+<div class="dpv3-label">Agregace:</div>
+<div class="dpv3-copy">Urcite ano - Spise ano - Nemohu se rozhodnout - Spise ne - Urcite ne <br> <strong>Každá hodnota je sledována samostatně</strong></div>
+</div>
+</div>
+<div class="dpv3-steps">
+<div class="dpv3-step"><div class="dpv3-step-num">1.</div><div class="dpv3-step-text"><strong>Srovnání s benchmarky</strong></div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">2.</div><div class="dpv3-step-text"><strong>Celkový přehled za firmu</strong></div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">3.</div><div class="dpv3-step-text"><strong>Detail otázek</strong></div></div>
+<div class="dpv3-step"><div class="dpv3-step-num">4.</div><div class="dpv3-step-text"><strong>Drivery v detailu za organizační jednotku</strong></div></div>
+</div>
+</div>
+
+<!----- Jak číst Drivery ve srovnání s benchmarky ------------>
+
+<div class="slide driver-bench-v2">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">Jak číst?</div>
+<div class="jakcist-header-sub">Srovnání driverů s relevantními benchmarky</div>
+</div>
+<div class="jakcist-q q1">?</div>
+<div class="jakcist-q q2">?</div>
+<div class="jakcist-q q3">?</div>
+</div>
+<div class="driver-bench-body">
+<p class="jakcist-lead">V této fázi sledujeme pouze podíl odpovědí, které klasifikujeme jako <strong>skvělý výsledek</strong> na všech odpovědích v rámci daného driveru.To nám umožňuje podívat se na výsledky s odstupem a srovnat je s relevantními benchmarky, než se plně ponoříme do rozboru výsledků uvnitř firmy.</p>
+<br>
+<p class="jakcist-lead"><strong>Příklad:</strong> driver Já a firma zde má hodnotu 81 %. To znamená, že 81 % odpovědí na otázky u tohoto driveru bylo buď <strong>Určitě ano</strong> nebo <strong>Spíše ano.</strong></p>
+<div class="driver-bench-table">
+<div class="db-row head"><div></div><div class="angled">Aktuální průzkum</div><div class="angled">Benchmark 1</div><div class="angled">Benchmark 2</div></div>
+<div class="db-row"><div class="db-label">Já a firma</div><div class="db-cell accent">81 %</div><div class="db-cell">78 %</div><div class="db-cell">88 %</div></div>
+<div class="db-row"><div class="db-label">Já a práce</div><div class="db-cell accent">78 %</div><div class="db-cell">98 %</div><div class="db-cell">78 %</div></div>
+<div class="db-row"><div class="db-label">Já a vedoucí</div><div class="db-cell accent">87 %</div><div class="db-cell">63 %</div><div class="db-cell">78 %</div></div>
+<div class="db-row"><div class="db-label">Já a rozvoj</div><div class="db-cell accent">67 %</div><div class="db-cell">88 %</div><div class="db-cell">76 %</div></div>
+</div>
+</div>
+</div>
+
+<!---- Jak číst drivery za firmu ----------->
+<div class="slide driver-firma-v2">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">Jak číst?</div>
+<div class="jakcist-header-sub">`r driver_scope_howto_title`</div>
+</div>
+<div class="jakcist-q q1">?</div>
+<div class="jakcist-q q2">?</div>
+<div class="jakcist-q q3">?</div>
+</div>
+<div class="driver-firma-body">
+<p class="jakcist-lead">Tento pohled na drivery engagementu je klíčový a z manažerského pohledu i nejvíce informativní. Na jednu stranu ukazuje kompletní agregované výsledky všech driverů (tzn. skvělé, průměrné i špatné výsledky), ale zároveň shrnuje i skvělé výsledky pro každou z otázek. Nabízí tak optimální balanc mezi celkovým přehledem a detailními výsledky.</p>
+<div class="driver-firma-bars">
+<div class="df-bar-block teal"><div class="df-bar"><strong>15 %</strong></div><div class="df-bar-copy">Podíl odpovědí <strong>Určitě ano</strong><br>a <strong>Spíše ano</strong> na všech odpovedich driveru</div></div>
+<div class="df-bar-block grey"><div class="df-bar"><strong>75 %</strong></div><div class="df-bar-copy">Podíl odpovědí <strong>Nemohu se rozhodnout</strong> na všech odpovědích driveru</div></div>
+<div class="df-bar-block pink"><div class="df-bar"><strong>10 %</strong></div><div class="df-bar-copy">Podíl odpovědí <strong>Určitě ne</strong><br>a <strong>Spíše ne</strong> na všech odpovědich driveru</div></div>
+</div>
+<div class="driver-firma-bottom">
+<div class="df-left-note"><br><br>Podíl odpovědí <strong>Určitě ano a Spíše ano</strong><br>na všech odpovědích na danou otázku</div>
+<div class="df-arrow"></div>
+<div class="df-right-list">
+<div class="df-item"><span>88 %</span> Můj vedoucí mi zadává úkoly jasně a přesně.</div>
+<div class="df-item"><span>88 %</span> Mám dobrý vztah se svým vedoucím.</div>
+<div class="df-item"><span>88 %</span> Dostávám pravidelnou zpětnou vazbu od mého vedoucího.</div>
+<div class="df-item"><span>88 %</span> Můj vedoucí mě dostatečně motivuje v mé práci.</div>
+</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">Škála odpovědí</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Určitě ano</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spíše ano</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spíše ne</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Určitě ne</div>
+</div>
+</div>
+</div>
+
+
+<!---- Jak číst detail otázky ----->
+<div class="slide driver-detail-v2">
+<div class="jakcist-header">
+<div class="jakcist-header-left">
+<div class="jakcist-header-main">Jak číst?</div>
+<div class="jakcist-header-sub">Detail otázky</div>
+</div>
+<div class="jakcist-q q1">?</div>
+<div class="jakcist-q q2">?</div>
+<div class="jakcist-q q3">?</div>
+</div>
+<div class="driver-detail-body">
+<p class="jakcist-lead">Detailní rozpad otázek jednoduše znamená, že pro každou otázku uvidíte, jaký měla podíl jednotlivých možných odpovědí. Tento podrobný pohled dokáže zodpovědět i velmi konkrétní otázky a přináší hluboký vhled do spokojenosti zaměstnanců v určitých tématech.</p>
+<div class="dd-row">
+<div class="dd-label">Otázka 1</div>
+<div class="dd-bar"><div class="seg teal"><strong>20 %</strong></div><div class="seg tealLight"><strong>20 %</strong></div><div class="seg grey"><strong>20 %</strong></div><div class="seg pinkLight"><strong>20 %</strong></div><div class="seg pinkStrong"><strong>20 %</strong></div></div>
+</div>
+<div class="dd-row">
+<div class="dd-label">Otázka 2</div>
+<div class="dd-bar"><div class="seg teal"><strong>20 %</strong></div><div class="seg tealLight"><strong>20 %</strong></div><div class="seg grey"><strong>20 %</strong></div><div class="seg pinkLight"><strong>20 %</strong></div><div class="seg pinkStrong"><strong>20 %</strong></div></div>
+</div>
+<div class="dd-notes">
+<div class="dd-note">Podíl odpovědi <strong>Určitě ano</strong> na danou otázku</div>
+<div class="dd-note">Podíl odpovědi <strong>Spíše ano</strong> na danou otázku</div>
+<div class="dd-note">Podíl odpovědi <strong>Nemohu se rozhodnout</strong> na danou otázku</div>
+<div class="dd-note">Podíl odpovědi <strong>Spise ne</strong> na danou otázku</div>
+<div class="dd-note">Podíl odpovědi <strong>Určitě ne</strong> na danou otázku</div>
+</div>
+</div>
+<div class="jakcist-legend">
+<div class="jakcist-legend-label">Škála odpovědí</div>
+<div class="jakcist-legend-items">
+<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Určitě ano</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spíše ano</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spíše ne</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Určitě ne</div>
+</div>
+</div>
+</div>
+
+
+
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+colors_driv <- c("Skvělý výsledek" = "#63E8C6", "Průměrný výsledek" = "#c5c5c5", 
+            "Špatný výsledek" = "#ff67aa")
+
+driver_bar_df <- function(df,nr) {
+  bar_df <- df %>%
+    filter(poradi == nr)
+  
+  return(bar_df)  
+}
+
+driver_name <- function(df,nr){
+  dr_name <- df %>%
+    ungroup() %>%
+    filter(poradi == nr)%>%
+    distinct(group_title)%>%
+    pull(group_title)%>%
+  first() %>%
+  stringr::str_replace_all("\\n", "")
+}
+
+plot_driver_bar <- function(df) {
+  ggplot(df, aes(x = "", y = pct, fill = odpoved_kat))+
+  geom_col(position = position_stack(),width = 0.4)+
+  geom_text(
+      aes(label = ifelse(pct >= 6, paste0(pct, "%"), "")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 15
+    )+
+  scale_y_continuous(expand = expansion(mult = c(0, 0)))+
+  scale_fill_manual(values = colors_driv)+
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_blank(),#element_text(family = "Europa",face = "bold", size = 25),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 0, r = 0, b = 0, l = 0)
+  )+
+  coord_flip(expand = FALSE)
+}
+
+nr_drivers <- length(unique(drivery_overview_complete$group_title))
+
+driver_top1 <- driver_name(drivery_overview_complete,1)
+driver_top2 <- driver_name(drivery_overview_complete,2)
+driver_top3 <- driver_name(drivery_overview_complete,3)
+driver_bottom1 <- driver_name(drivery_overview_complete,(nr_drivers-2))
+driver_bottom2 <- driver_name(drivery_overview_complete,(nr_drivers-1))
+driver_bottom3 <- driver_name(drivery_overview_complete,(nr_drivers))
+
+
+drivery_skvele <- drivery_otazky %>%
+  dplyr::select(-poradi)%>%
+  filter(odpoved_kat == "Skvělý výsledek")%>%
+  group_by(group_title)%>%
+  arrange(desc(pct),.by_group=T)
+
+get_driver_question_rows <- function(driver_results, question_results, rank) {
+  driver_group <- driver_results %>%
+    filter(poradi == rank) %>%
+    distinct(group_title) %>%
+    pull(group_title)
+
+  question_results %>%
+    ungroup() %>%
+    filter(group_title == driver_group)
+}
+
+render_driver_question_items <- function(driver_results, question_results, rank) {
+  question_rows <- get_driver_question_rows(driver_results, question_results, rank)
+
+  if (nrow(question_rows) == 0) {
+    return(invisible(NULL))
+  }
+
+  items_html <- vapply(seq_len(nrow(question_rows)), function(i) {
+    row <- question_rows[i, , drop = FALSE]
+    paste0(
+      '<div class="drvco-item"><span>',
+      htmltools::htmlEscape(paste0(round(row$pct[[1]]), " %")),
+      '</span>',
+      htmltools::htmlEscape(row$otazka_title[[1]]),
+      '</div>'
+    )
+  }, character(1))
+
+  cat(items_html, sep = "\n")
+}
+
+###################################################################
+################## detail
+
+colors_detail <- c("1"="#63e8c6","2"="#e1faf4","3"="#a5a5a5",
+                   "4"="#ff8ade","5"="#ff67aa")
+
+detail_order <- c("1","2","3","4","5")
+
+drivery_detail <- final_long_df %>%
+  filter(group_title != params$demografie & group_title != "Engagement"
+         & typ_otazky == "opinion_scale")%>%
+  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = rev(detail_order)))%>%
+  group_by(respondent_id,group_title,otazka_title)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),.groups="drop")%>%
+  group_by(group_title,otazka_title,odpoved_hodnota)%>%
+  count(odpoved_hodnota, name="n")%>%
+  group_by(group_title,otazka_title)%>%
+  mutate(pct = round((n/sum(n))*100,2))%>%
+  left_join(drivery_sort%>%select(group_title,poradi), by = "group_title")
+
+### pořadí hodnot
+
+
+
+
+
+get_driver_detail <- function(df,nr){
+  dr_detail <- df %>%
+    filter(poradi==nr)
+  
+  return(dr_detail)
+}
+
+get_driver_detail_title <- function(driver_results, rank) {
+  htmltools::htmlEscape(driver_name(driver_results, rank))
+}
+
+get_driver_detail_fig_height <- function(df, nr) {
+  question_count <- df %>%
+    ungroup() %>%
+    filter(poradi == nr) %>%
+    distinct(otazka_title) %>%
+    nrow()
+
+  # Scale slide height by question count so bar thickness stays visually steadier.
+  max(4.1, question_count * 0.52)
+}
+
+
+plot_driver_detail <- function(df,nr){
+  
+  df_plot <- get_driver_detail(df,nr)
+  
+  ggplot(df_plot, aes(x = otazka_title, y = pct, fill = odpoved_hodnota))+
+  geom_col(position = position_stack(),width = 0.5)+
+  geom_text(
+      aes(label = ifelse(pct >= 5, paste0(round(pct,1), "%"), "")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+  scale_fill_manual(values = colors_detail)+
+  scale_x_discrete(
+  labels = function(x) stringr::str_wrap(x, width = 55)
+  )+
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_text(family = "Europa",face = "bold", size = 25, lineheight = 0.5),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )+
+  coord_flip()
+}
+
+render_driver_detail_slides <- function(detail_df, total_pages) {
+  if (total_pages <= 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide driver-detail2-v2">',
+    '<div class="ei-kicker">Výsledky</div>',
+    '<div class="drvdet-title">{{driver_title}} - <span class="accent-teal">detailně</span></div>',
+    '<div class="drvdet-plot-full">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 14',
+    '#| fig-height: 5',
+    '#| fig-align: center',
+    '',
+    'plot_driver_detail(detail_df,{{i}})',
+    '```',
+    '</div>',
+    '<div class="jakcist-legend">',
+    '<div class="jakcist-legend-label">Škála odpovědí</div>',
+    '<div class="jakcist-legend-items">',
+    '<div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Určitě ano</div>',
+    '<div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spíše ano</div>',
+    '<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout</div>',
+    '<div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spíše ne</div>',
+    '<div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Určitě ne</div>',
+    '</div>',
+    '</div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_len(total_pages), function(i) {
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      driver_title = get_driver_detail_title(detail_df, i),
+      fig_height = get_driver_detail_fig_height(detail_df, i)
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+
+
+###########################################
+######## detail otázky dle oddělení
+
+
+driver_detail_firma <- df_firma %>%
+  filter(group_title != params$demografie & group_title != "Engagement"
+         & typ_otazky == "opinion_scale")%>%
+  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = rev(detail_order)))%>%
+  group_by(respondent_id,group_title,otazka_title)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),.groups="drop")%>%
+  group_by(group_title)%>%
+  count(odpoved_hodnota, name="n")%>%
+  group_by(group_title)%>%
+  mutate(pct_firma = round((n/sum(n))*100,2))%>%
+  left_join(drivery_sort%>%select(group_title,poradi), by = "group_title")
+
+
+get_detail_odd <- function(df,nr){
+  
+  df_odd <- df %>%
+  filter(group_title != params$demografie & group_title != "Engagement"
+         & typ_otazky == "opinion_scale")%>%
+  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = rev(detail_order)))%>%
+  group_by(respondent_id,group_title)%>%
+    
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)),.groups="drop")%>%
+  left_join(odd_responses,by="respondent_id")%>%
+    
+  count(group_title, oddeleni, odpoved_hodnota, name = "n") %>%
+    
+    tidyr::complete(
+      group_title,
+      oddeleni,
+      odpoved_hodnota,
+      fill = list(n = 0)
+    ) %>%
+    
+  group_by(group_title,oddeleni)%>%
+  mutate(pct = round((n/sum(n))*100,2))%>%
+  left_join(drivery_sort%>%select(group_title,poradi), by = "group_title")%>%
+  left_join(driver_detail_firma%>%select(group_title,odpoved_hodnota,pct_firma), by=c("group_title","odpoved_hodnota"))%>%
+  filter(as.character(odpoved_hodnota) == as.character(nr))
+  
+  return(df_odd)
+}
+
+urc_ano_odd <- get_detail_odd(final_long_df,1)
+
+spise_ano_odd <- get_detail_odd(final_long_df,2)
+
+nevim_odd <- get_detail_odd(final_long_df,3)
+
+spise_ne_odd <- get_detail_odd(final_long_df,4)
+
+urc_ne_odd <- get_detail_odd(final_long_df,5)
+
+plot_detail_odd <- function(df,nr){
+  df_plot <- df %>%
+    filter(poradi == nr)
+  
+  ggplot(df_plot, aes(x = oddeleni, y = pct, fill = odpoved_hodnota))+
+  geom_col()+
+  geom_text(
+      aes(label = paste0(round(pct,1), "%")),
+      vjust = .5,
+      hjust = 1,
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+  scale_fill_manual(values = colors_detail)+
+  scale_y_continuous(limits = c(0, 100))+
+  scale_x_discrete(
+  labels = function(x) stringr::str_wrap(x, width = 55)
+  ) +
+  #guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )+
+  geom_hline(
+  yintercept = unique(df_plot$pct_firma),
+  color = "#A5A5A5",
+  linewidth = 3,
+  alpha = 0.6
+  )+
+  coord_flip()
+  
+}
+
+get_detail_odd_legend_color <- function(detail_odd_df) {
+  response_value <- detail_odd_df %>%
+    ungroup() %>%
+    distinct(odpoved_hodnota) %>%
+    pull(odpoved_hodnota) %>%
+    first() %>%
+    as.character()
+
+  if (is.na(response_value) || is.null(colors_detail[[response_value]])) {
+    return("#cfcfcf")
+  }
+
+  colors_detail[[response_value]]
+}
+
+get_detail_odd_response_label <- function(detail_odd_df) {
+  response_value <- detail_odd_df %>%
+    ungroup() %>%
+    distinct(odpoved_hodnota) %>%
+    pull(odpoved_hodnota) %>%
+    first() %>%
+    as.character()
+
+  response_labels <- c(
+    "1" = "Určitě ano",
+    "2" = "Spíše ano",
+    "3" = "Nemohu se rozhodnout",
+    "4" = "Spíše ne",
+    "5" = "Určitě ne"
+  )
+
+  response_label <- response_labels[[response_value]]
+
+  if (is.null(response_label) || is.na(response_label)) {
+    return(htmltools::htmlEscape(response_value))
+  }
+
+  htmltools::htmlEscape(response_label)
+}
+
+render_driver_odd_slides <- function(detail_odd_df, total_pages) {
+  if (total_pages <= 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide driver-oddeleni-v2">',
+    '<div class="ei-kicker">Výsledky</div>',
+    '<div class="drvodd-title">{{driver_title}} - {{response_label}} <span class="accent-teal">srovnání dle oddělení</span></div>',
+    '<div class="drvodd-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 12',
+    '#| fig-height: 7',
+    '',
+    'plot_detail_odd(detail_odd_df,{{i}})',
+    '```',
+    '</div>',
+    '<div class="drvodd-legend">',
+    '<div class="drvodd-legend-label">Škála odpovědí</div>',
+    '<div class="drvodd-legend-item"><svg class="drvodd-swatch-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="4" ry="4" fill="{{oddeleni_color}}"></rect></svg>Míra spokojenosti za oddělení</div>',
+    '<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Míra spokojenosti za firmu</div>',
+    '</div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_len(total_pages), function(i) {
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      driver_title = get_driver_detail_title(detail_odd_df, i),
+      response_label = get_detail_odd_response_label(detail_odd_df),
+      oddeleni_color = get_detail_odd_legend_color(detail_odd_df)
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+
+
+
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_benchmark_results(
+  driver_benchmark_results_table,
+  driver_benchmark_columns
+)
+```
+
+
+<!---- Výsledky drivery za firmu---->
+<div class="slide driver-company-v2">
+<div class="ei-kicker">Výsledky</div>
+<div class="drvco-head">
+<div class="drvco-title">`r driver_scope_title`</div>
+</div>
+<div class="drvco-subheads-row">
+<div class="drvco-left-subhead">Top 3</div>
+<div class="drvco-right-subhead">Bottom 3</div>
+</div>
+<div class="drvco-grid">
+<div class="drvco-col">
+<div class="drvco-block">
+<div class="drvco-block-title">`r driver_top1`</div>
+<div class="drvco-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 7.5
+#| fig-height: 0.5
+
+plot_driver_bar(driver_bar_df(drivery_overview_complete,1))
+```
+</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_question_items(drivery_overview_complete, drivery_skvele, 1)
+```
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">`r driver_top2`</div>
+<div class="drvco-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 6.6
+#| fig-height: 0.5
+
+plot_driver_bar(driver_bar_df(drivery_overview_complete,2))
+```
+</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_question_items(drivery_overview_complete, drivery_skvele, 2)
+```
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">`r driver_top3`</div>
+<div class="drvco-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 6.6
+#| fig-height: 0.5
+
+plot_driver_bar(driver_bar_df(drivery_overview_complete,3))
+```
+</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_question_items(drivery_overview_complete, drivery_skvele, 3)
+```
+</div>
+</div>
+<div class="drvco-col">
+<div class="drvco-block">
+<div class="drvco-block-title">`r driver_bottom1`</div>
+<div class="drvco-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 6.6
+#| fig-height: 0.5
+
+plot_driver_bar(driver_bar_df(drivery_overview_complete,(nr_drivers-2)))
+```
+</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_question_items(drivery_overview_complete, drivery_skvele, (nr_drivers - 2))
+```
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">`r driver_bottom2`</div>
+<div class="drvco-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 6.6
+#| fig-height: 0.5
+
+plot_driver_bar(driver_bar_df(drivery_overview_complete,(nr_drivers-1)))
+```
+</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_question_items(drivery_overview_complete, drivery_skvele, (nr_drivers - 1))
+```
+</div>
+<div class="drvco-block">
+<div class="drvco-block-title">`r driver_bottom3`</div>
+<div class="drvco-plot">
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 6.6
+#| fig-height: 0.5
+
+plot_driver_bar(driver_bar_df(drivery_overview_complete,(nr_drivers)))
+```
+</div>
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_question_items(drivery_overview_complete, drivery_skvele, (nr_drivers))
+```
+</div>
+
+
+
+
+</div>
+</div>
+</div>
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+render_driver_detail_slides(drivery_detail, nr_drivers)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_driver_odd_slides(urc_ano_odd, nr_drivers)
+}
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+problematic_otazky_text <- drivery_benchmark %>%
+  filter(pod_benchmarkem == T)%>%
+  pull(otazka_title)
+
+problematic_otazky <- final_long_df %>%
+    filter(otazka_title %in% problematic_otazky_text) %>%
+    distinct(otazka_title) %>%
+    mutate(poradi = seq_along(otazka_title))
+
+problematic_df <- final_long_df %>%
+  filter(otazka_title %in% problematic_otazky_text) %>%
+  group_by(respondent_id,otazka_title,odpoved_hodnota) %>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)), .groups = "drop")%>%
+  left_join(odd_responses, by = "respondent_id")%>%
+  mutate(odpoved_kat = case_when(
+    odpoved_hodnota <= 2 ~ "Skvělý výsledek",
+    odpoved_hodnota == 3 ~ "Průměrný výsledek",
+    odpoved_hodnota > 3 ~ "Špatný výsledek"
+  ),
+  odpoved_kat = factor(odpoved_kat, levels=rev(drivery_agg_order)))%>%
+  count(otazka_title, oddeleni, odpoved_kat, name = "n") %>%
+  group_by(otazka_title,oddeleni) %>%
+  mutate(pct = round((n/sum(n))*100,1))%>%
+  left_join(problematic_otazky,by="otazka_title")
+
+get_problematic <- function(df,nr){
+
+  prob_df <- df %>%
+    filter(poradi == nr)
+
+}
+
+get_problematic_title <- function(question_df, nr) {
+  question_df %>%
+    ungroup() %>%
+    filter(poradi == nr) %>%
+    distinct(otazka_title) %>%
+    pull(otazka_title) %>%
+    first() %>%
+    htmltools::htmlEscape()
+}
+
+split_problematic_pages <- function(df, max_columns = 10) {
+  if (nrow(df) == 0) {
+    return(list())
+  }
+
+  question_order <- df %>%
+    ungroup() %>%
+    distinct(poradi, otazka_title) %>%
+    arrange(poradi)
+
+  pages <- list()
+  page_index <- 1
+
+  for (i in seq_len(nrow(question_order))) {
+    question_nr <- question_order$poradi[[i]]
+    question_df <- df %>%
+      ungroup() %>%
+      filter(poradi == question_nr)
+
+    oddeleni_order <- question_df %>%
+      distinct(oddeleni) %>%
+      pull(oddeleni)
+
+    oddeleni_chunks <- split(
+      oddeleni_order,
+      ceiling(seq_along(oddeleni_order) / max_columns)
+    )
+
+    for (chunk_index in seq_along(oddeleni_chunks)) {
+      pages[[page_index]] <- question_df %>%
+        filter(oddeleni %in% oddeleni_chunks[[chunk_index]])
+      page_index <- page_index + 1
+    }
+  }
+
+  pages
+}
+
+plot_problematic <- function(df,nr){
+  df_plot <- get_problematic(df,nr)
+
+  ggplot(df_plot, aes(x = oddeleni, y = pct, fill = odpoved_kat))+
+  geom_col(position = position_stack(),width = 0.5)+
+  geom_text(
+      aes(label = paste0(pct, " %")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+  scale_fill_manual(values = colors_driv)+
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )
+}
+
+plot_problematic_page <- function(df_page) {
+  ggplot(df_page, aes(x = oddeleni, y = pct, fill = odpoved_kat))+
+    geom_col(position = position_stack(),width = 0.5)+
+    geom_text(
+      aes(label = paste0(pct, " %")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+    scale_fill_manual(values = colors_driv)+
+    guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+    theme(
+      panel.grid = element_blank(),
+      panel.background = element_rect(fill = "white", colour = NA),
+      plot.background = element_rect(fill = "white", colour = NA),
+      legend.background = element_rect(fill = "white", colour = NA),
+      legend.box.background = element_rect(fill = "white", colour = NA),
+      axis.text.x  = element_blank(),
+      axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
+      axis.ticks.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      legend.title = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(family = "Europa", size = 25),
+      plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+    )+
+    coord_flip()
+}
+
+render_problematic_breakdown_slides <- function(problematic_pages) {
+  if (length(problematic_pages) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide problematic-breakdown-v2">',
+    '<div class="ei-kicker">Výsledky</div>',
+    '<div class="pbv-title">{{question_title}} <span>dle oddeleni</span></div>',
+    '<div class="pbv-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 11.8',
+    '#| fig-height: 5.6',
+    '',
+    'df_page <- problematic_pages[[{{i}}]]',
+    'plot_problematic_page(df_page)',
+    '```',
+    '</div>',
+    '{{arrow_html}}',
+    '<div class="pbv-legend">',
+    '<div class="pbv-legend-label">Skala odpovedi</div>',
+    '<div class="pbv-legend-item"><i class="pbv-swatch teal"></i>Skvely vysledek</div>',
+    '<div class="pbv-legend-item"><i class="pbv-swatch grey"></i>Prumerny vysledek</div>',
+    '<div class="pbv-legend-item"><i class="pbv-swatch pink"></i>Spatny vysledek</div>',
+    '</div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(problematic_pages), function(i) {
+    page_df <- problematic_pages[[i]]
+    question_nr <- page_df %>%
+      distinct(poradi) %>%
+      pull(poradi) %>%
+      first()
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      question_title = get_problematic_title(problematic_otazky, question_nr),
+      arrow_html = {
+        next_question_nr <- if (i < length(problematic_pages)) {
+          problematic_pages[[i + 1]] %>%
+            distinct(poradi) %>%
+            pull(poradi) %>%
+            first()
+        } else {
+          NA
+        }
+        if (!is.na(next_question_nr) && next_question_nr == question_nr) {
+          '<div class="eio-next" aria-hidden="true"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"></div>'
+        } else {
+          ""
+        }
+      }
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+split_problematic_senior_pages <- function(df, max_columns = 10) {
+  if (nrow(df) == 0) {
+    return(list())
+  }
+
+  question_order <- df %>%
+    ungroup() %>%
+    distinct(poradi, otazka_title) %>%
+    arrange(poradi)
+
+  pages <- list()
+  page_index <- 1
+
+  for (i in seq_len(nrow(question_order))) {
+    question_nr <- question_order$poradi[[i]]
+    question_df <- df %>%
+      ungroup() %>%
+      filter(poradi == question_nr)
+
+    seniorita_order <- question_df %>%
+      distinct(seniorita) %>%
+      pull(seniorita)
+
+    seniorita_chunks <- split(
+      seniorita_order,
+      ceiling(seq_along(seniorita_order) / max_columns)
+    )
+
+    for (chunk_index in seq_along(seniorita_chunks)) {
+      pages[[page_index]] <- question_df %>%
+        filter(seniorita %in% seniorita_chunks[[chunk_index]])
+      page_index <- page_index + 1
+    }
+  }
+
+  pages
+}
+
+render_problematic_senior_slides <- function(problematic_senior_pages) {
+  if (length(problematic_senior_pages) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide problematic-breakdown-v2">',
+    '<div class="ei-kicker">Výsledky</div>',
+    '<div class="pbv-title">{{question_title}} dle <span>seniority</span></div>',
+    '<div class="pbv-chart pbv-chart-wide">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 15.4',
+    '#| fig-height: 5.6',
+    '',
+    'df_page <- problematic_senior_pages[[{{i}}]]',
+    'question_nr <- df_page %>% distinct(poradi) %>% pull(poradi) %>% first()',
+    'plot_problematic_senior(df_page, question_nr)',
+    '```',
+    '</div>',
+    '{{arrow_html}}',
+    '<div class="pbv-legend">',
+    '<div class="pbv-legend-label">Skala odpovedi</div>',
+    '<div class="pbv-legend-item"><i class="pbv-swatch teal"></i>Skvely vysledek</div>',
+    '<div class="pbv-legend-item"><i class="pbv-swatch grey"></i>Prumerny vysledek</div>',
+    '<div class="pbv-legend-item"><i class="pbv-swatch pink"></i>Spatny vysledek</div>',
+    '</div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(problematic_senior_pages), function(i) {
+    page_df <- problematic_senior_pages[[i]]
+    question_nr <- page_df %>%
+      distinct(poradi) %>%
+      pull(poradi) %>%
+      first()
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      question_title = get_problematic_title(problematic_otazky, question_nr),
+      arrow_html = {
+        next_question_nr <- if (i < length(problematic_senior_pages)) {
+          problematic_senior_pages[[i + 1]] %>%
+            distinct(poradi) %>%
+            pull(poradi) %>%
+            first()
+        } else {
+          NA
+        }
+        if (!is.na(next_question_nr) && next_question_nr == question_nr) {
+          '<div class="eio-next" aria-hidden="true"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"><img src="visuals/sipka.png" alt="" class="eio-next-arrow"></div>'
+        } else {
+          ""
+        }
+      }
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+
+
+
+###### problematické otázky dle seniority
+
+seniorita_responses <- final_long_df %>%
+  filter(otazka_title == doba_ot)%>%
+  dplyr::select(respondent_id,odpoved_hodnota)%>%
+  group_by(respondent_id)%>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
+  rename(seniorita = odpoved_hodnota)
+
+problematic_df_senior <- final_long_df %>%
+  filter(otazka_title %in% problematic_otazky_text) %>%
+  group_by(respondent_id,otazka_title,odpoved_hodnota) %>%
+  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)), .groups = "drop")%>%
+  left_join(seniorita_responses, by = "respondent_id")%>%
+  mutate(odpoved_kat = case_when(
+    odpoved_hodnota <= 2 ~ "Skvělý výsledek",
+    odpoved_hodnota == 3 ~ "Průměrný výsledek",
+    odpoved_hodnota > 3 ~ "Špatný výsledek"
+  ),
+  odpoved_kat = factor(odpoved_kat, levels=rev(drivery_agg_order)))%>%
+  count(otazka_title, seniorita, odpoved_kat, name = "n") %>%
+  group_by(otazka_title,seniorita) %>%
+  mutate(pct = round((n/sum(n))*100,1))%>%
+  left_join(problematic_otazky,by="otazka_title")
+
+plot_problematic_senior <- function(df,nr){
+  df_plot <- get_problematic(df,nr)
+
+  ggplot(df_plot, aes(x = seniorita, y = pct, fill = odpoved_kat))+
+  geom_col(position = position_stack(),width = 0.5)+
+  geom_text(
+      aes(label = paste0(pct, " %")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+  scale_fill_manual(values = colors_driv)+
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE, reverse = T)) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_blank(),
+    axis.text.y = element_text(family = "Europa",face = "bold", size = 25),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )+
+  coord_flip()
+}
+
+
+##########################################
+########### multiple choice
+
+mc_questions <- final_long_df %>%
+  filter(group_title != params$demografie & 
+           group_title != "Engagement" &
+           typ_otazky == "multiple_choice") %>%
+  select(respondent_id,odpoved_hodnota,otazka_title)%>%
+  distinct(otazka_title)%>%
+  mutate(poradi = seq_along(otazka_title))
+
+
+mc_df <- final_long_df %>%
+  filter(group_title != params$demografie & 
+           group_title != "Engagement" &
+           typ_otazky == "multiple_choice")%>%
+  group_by(otazka_title)%>%
+  count(odpoved_hodnota, name="n")%>%
+  mutate(pct = (n/pocet_resp)*100)%>%
+  left_join(mc_questions,by="otazka_title")
+
+get_mc <- function(df,nr){
+  df_detail <- df %>%
+    filter(poradi == nr)
+  
+  return(df_detail)
+}
+  
+
+plot_mc <- function(df){
+  ggplot(df,aes(x=odpoved_hodnota,y=pct))+
+    geom_col(fill = "#63E8C6", width = 0.6)+
+    geom_text(
+      aes(label = paste0(pct, " %")),
+      vjust = -1,
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+    scale_y_continuous(limits = c(0, 100))+
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = "white", colour = NA),
+    legend.background = element_rect(fill = "white", colour = NA),
+    legend.box.background = element_rect(fill = "white", colour = NA),
+    axis.text.x  = element_text(family = "Europa",face = "bold", size = 25),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(family = "Europa", size = 25),
+    plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+  )
+}  
+
+plot_mc_example <- function() {
+  example_df <- tibble(
+    odpoved_hodnota = c("Moznost 01", "Moznost 02", "Moznost 03"),
+    pct = c(33, 67, 21)
+  )
+
+  ggplot(example_df, aes(x = odpoved_hodnota, y = pct))+
+    geom_col(fill = "#63E8C6", width = 0.7)+
+    geom_text(
+      aes(label = paste0(pct, " %")),
+      position = position_stack(vjust = 0.5),
+      family = "Europa",
+      fontface = "bold",
+      size = 12
+    )+
+    theme(
+      panel.grid = element_blank(),
+      panel.background = element_rect(fill = "white", colour = NA),
+      plot.background = element_rect(fill = "white", colour = NA),
+      legend.background = element_rect(fill = "white", colour = NA),
+      legend.box.background = element_rect(fill = "white", colour = NA),
+      axis.text.x  = element_text(family = "Europa",face = "bold", size = 25),
+      axis.text.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      legend.title = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(family = "Europa", size = 25),
+      plot.margin = margin(t = 6, r = 0, b = 0, l = 0)
+    )
+}
+
+get_mc_title <- function(question_df, nr) {
+  question_df %>%
+    ungroup() %>%
+    filter(poradi == nr) %>%
+    distinct(otazka_title) %>%
+    pull(otazka_title) %>%
+    first() %>%
+    htmltools::htmlEscape()
+}
+
+split_mc_pages <- function(df, max_columns = 10) {
+  if (nrow(df) == 0) {
+    return(list())
+  }
+
+  question_order <- df %>%
+    ungroup() %>%
+    distinct(poradi, otazka_title) %>%
+    arrange(poradi)
+
+  pages <- list()
+  page_index <- 1
+
+  for (i in seq_len(nrow(question_order))) {
+    question_nr <- question_order$poradi[[i]]
+    question_df <- df %>%
+      ungroup() %>%
+      filter(poradi == question_nr)
+
+    option_order <- question_df %>%
+      distinct(odpoved_hodnota) %>%
+      pull(odpoved_hodnota)
+
+    option_chunks <- split(
+      option_order,
+      ceiling(seq_along(option_order) / max_columns)
+    )
+
+    for (chunk_index in seq_along(option_chunks)) {
+      pages[[page_index]] <- question_df %>%
+        filter(odpoved_hodnota %in% option_chunks[[chunk_index]])
+      page_index <- page_index + 1
+    }
+  }
+
+  pages
+}
+
+render_multiple_choice_result_slides <- function(mc_pages) {
+  if (length(mc_pages) == 0) {
+    return(invisible(NULL))
+  }
+
+  slide_template <- paste(
+    '<div class="slide multiple-results-v2">',
+    '<div class="ei-kicker">Výsledky</div>',
+    '<div class="mrv-title">{{question_title}}</div>',
+    '<div class="mrv-chart">',
+    '```{r}',
+    '#| echo: false',
+    '#| warning: false',
+    '#| message: false',
+    '#| fig-width: 14.5',
+    '#| fig-height: 6.2',
+    '',
+    'df_page <- mc_pages[[{{i}}]]',
+    'plot_mc(df_page)',
+    '```',
+    '</div>',
+    '</div>',
+    sep = "\n"
+  )
+
+  rendered_slides <- lapply(seq_along(mc_pages), function(i) {
+    page_df <- mc_pages[[i]]
+    question_nr <- page_df %>%
+      distinct(poradi) %>%
+      pull(poradi) %>%
+      first()
+
+    expanded_slide <- knitr::knit_expand(
+      text = slide_template,
+      i = i,
+      question_title = get_mc_title(mc_questions, question_nr)
+    )
+
+    knitr::knit_child(text = expanded_slide, quiet = TRUE, envir = environment())
+  })
+
+  cat(unlist(rendered_slides), sep = "\n")
+}
+  
+
+#####################################
+#####rendering functions
+
+render_section_cover_slide <- function(agenda_cfg, section_name, title, copy) {
+  section_progress <- get_progress(agenda_cfg, section_name)
+
+  slide_html <- knitr::knit_expand(
+    text = paste(
+      '<div class="slide section-slide section-slide--pvc">',
+      '<div class="section-left-bleed" aria-hidden="true"></div>',
+      '<div class="section-right-bleed" aria-hidden="true"></div>',
+      '<div class="section-bottom-bleed" aria-hidden="true"></div>',
+      '<div class="section-number">{{badge}}</div>',
+      '<div class="section-title">{{title}}</div>',
+      '<div class="section-description">{{copy}}</div>',
+      '<div class="scv-progress">',
+      '{{progress}}',
+      '</div>',
+      '</div>',
+      sep = "\n"
+    ),
+    badge = get_section_badge(agenda_cfg, section_name),
+    title = title,
+    copy = copy,
+    progress = progress_rectangles(section_progress$filled, section_progress$total)
+  )
+
+  cat(slide_html, sep = "\n")
+}
+
+render_problematic_section <- function(agenda_cfg) {
+  if (!horsi_vysledky_present) {
+    return(invisible(NULL))
+  }
+
+  problematic_pages <- split_problematic_pages(problematic_df, max_columns = 10)
+  problematic_senior_pages <- split_problematic_senior_pages(problematic_df_senior, max_columns = 10)
+
+  slide_html <- knitr::knit_expand(
+    text = paste(
+      '<div class="slide section-slide section-slide--pvc">',
+      '<div class="section-left-bleed" aria-hidden="true"></div>',
+      '<div class="section-right-bleed" aria-hidden="true"></div>',
+      '<div class="section-bottom-bleed" aria-hidden="true"></div>',
+      '<div class="section-number">{{badge}}</div>',
+      '<div class="section-title">Problematicke otazky</div>',
+      '<div class="section-description">Pokud se nejaka otazka ukaze jako problematicka, verime, ze je dulezite se na ni podivat hloubeji. Proto v nasledujici sekci rozebereme otazky, ktere maji zastoupeni skvelych odpovedi nizsi nez XY %. Tuto hranici jsme urcili na zaklade aktualnich trendu a vlastnich analyz.</div>',
+      '<div class="scv-progress">',
+      '```{r}',
+      '#| echo: false',
+      '#| results: asis',
+      '',
+      'prob_progress <- get_progress(agenda_cfg, "Otázky, které dopadly hůře")',
+      'cat(progress_rectangles(prob_progress$filled, prob_progress$total))',
+      '```',
+      '</div>',
+      '</div>',
+      sep = "\n"
+    ),
+    badge = get_section_badge(agenda_cfg, "Otázky, které dopadly hůře")
+  )
+
+  cat(knitr::knit_child(text = slide_html, quiet = TRUE, envir = environment()), sep = "\n")
+  if (is_firma_report) {
+    render_problematic_breakdown_slides(problematic_pages)
+  }
+  render_problematic_senior_slides(problematic_senior_pages)
+}
+
+render_multiple_choice_section <- function(agenda_cfg) {
+  if (!mc_present) {
+    return(invisible(NULL))
+  }
+
+  mc_pages <- split_mc_pages(mc_df, max_columns = 10)
+
+  slide_html <- knitr::knit_expand(
+    text = paste(
+      '<div class="slide section-slide section-slide--pvc">',
+      '<div class="section-left-bleed" aria-hidden="true"></div>',
+      '<div class="section-right-bleed" aria-hidden="true"></div>',
+      '<div class="section-bottom-bleed" aria-hidden="true"></div>',
+      '<div class="section-number">{{badge}}</div>',
+      '<div class="section-title">Multiple choice otazky</div>',
+      '<div class="section-description">Ne vsechny otazky jsou hodnocene na skale od Urcite ano po Urcite ne. V nekterych otazkach rovnez zkoumame preference respondentu s moznosti vybrat vice odpovedi. Tem je venovana nasledujici sekce.</div>',
+      '<div class="scv-progress">',
+      '```{r}',
+      '#| echo: false',
+      '#| results: asis',
+      '',
+      'mc_progress <- get_progress(agenda_cfg, "Multiple choice otázky")',
+      'cat(progress_rectangles(mc_progress$filled, mc_progress$total))',
+      '```',
+      '</div>',
+      '</div>',
+      '',
+      '<div class="slide multiple-howto-v2">',
+      '<div class="jakcist-header jakcist-header--inset">',
+      '<div class="jakcist-header-left">',
+      '<div class="jakcist-header-main">Jak cist?</div>',
+      '<div class="jakcist-header-sub">Multiple choice otazky</div>',
+      '</div>',
+      '<div class="jakcist-q q1">?</div>',
+      '<div class="jakcist-q q2">?</div>',
+      '<div class="jakcist-q q3">?</div>',
+      '</div>',
+      '<div class="mcv-body">',
+      '<div class="mcv-text">',
+      '<div class="mcv-formula">1/3 = 33 %</div>',
+      '<div class="mcv-copy">Tuto moznost preferuje<br><strong>33 %</strong> respondentu</div>',
+      '</div>',
+      '<div class="mcv-chart">',
+      '```{r}',
+      '#| echo: false',
+      '#| warning: false',
+      '#| message: false',
+      '#| fig-width: 8.2',
+      '#| fig-height: 4.8',
+      '',
+      'plot_mc_example()',
+      '```',
+      '</div>',
+      '</div>',
+      '</div>',
+      sep = "\n"
+    ),
+    badge = get_section_badge(agenda_cfg, "Multiple choice otázky")
+  )
+
+  cat(knitr::knit_child(text = slide_html, quiet = TRUE, envir = environment()), sep = "\n")
+  render_multiple_choice_result_slides(mc_pages)
+}
+
+render_final_summary_section <- function(agenda_cfg) {
+  render_section_cover_slide(
+    agenda_cfg = agenda_cfg,
+    section_name = "Co dělat s výsledky",
+    title = "Co dělat s výsledky",
+    copy = "Jak interpretovat výsledky a vytvořit z nich smysluplné akce, které vaší firmě/organizaci pomohou?"
+  )
+  slide_html <- paste(
+    '<!------------ Doporuceni 1 ----------------->',
+    '<div class="slide drivers-list-v3">',
+    '<div class="drv3-title">Ne každé číslo je <span class="accent-teal">priorita</span></div>',
+    '<div class="drv3-lead">',
+    'Neinterpretujte izolovaná čísla. Výsledek vždy čtěte podle návratnosti, velikosti skupiny, rozdílu vůči benchmarku, rozdílu vůči firmě a aktuální situace organizace.',
+    '</div>',
+    '<div class="drv3-grid">',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Návratnost</div>',
+    '<div class="drv3-item-text">',
+    'Výsledky jsou tím silnější, čím lepe odpovídají napříč firmou i jednotlivými skupinami. Návratnost nad 70 % většinou umožňuje komfortní interpretaci, u nižší návratnosti je potřeba více hlídat zastoupení jednotlivých skupin.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Benchmark</div>',
+    '<div class="drv3-item-text">',
+    'Benchmark pomáhá určit kontext. Není to ale rozsudek ani jediný cíl. Predevším je dobré sledovat porovnání s benchmarkem při prvním měření. U dalšího je potom stejně důležité sledovat firemní trend a to, jestli se daří posouvat akčními kroky jednotlivé drivery.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Rozdíl vůči firmě</div>',
+    '<div class="drv3-item-text">',
+    'Tým nebo oddělení může být problémové i tehdy, když celkový výsledek firmy vypadá dobře. Porovnávejte výsledky jednotlivých oddělení/týmů vůči firemnímu benchmarku.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Velikost a proporce skupiny</div>',
+    '<div class="drv3-item-text">Stejné procento může znamenat úplně jiný problém podle velikosti firmy nebo týmu. Vždy interpretujte výsledky na základě proporce a velikosti. Dopady špatného vedení ze strany jednoho manazera budou mít zcela jiný dopad ve firmě o velikosti 20 a 500 zaměstnanců.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Aktualní téma firmy</div>',
+    '<div class="drv3-item-text">Prioritou se má stát to, co je pro firmu právě teď skutečně důležité: leadership, komunikace, výkon, změna, stabilita, rozvoj nebo spolupráce.</div>',
+    '</div>',
+    '</div>',
+    '</div>',
+    '<!----------- Doporučení 2 ------------------->',
+    '<div class="slide drivers-present-v3">',
+    '<div class="dpv3-title">Začněte tím, co už <span class="accent-teal">funguje</span></div>',
+    '<div class="dpv3-intro">',
+    'Dobré výsledky nejsou jen pozitivní část reportu. Ukazují, co ve firmě funguje, co stojí za to chránit a co lze přenést dál.',
+    '</div>',
+    '<div class="dpv3-top">',
+    '<div class="dpv3-text">',
+    '<strong style="font-size: 32px;">Hledejte, co drží firmu silnou:</strong>',
+    '</div>',
+    '</div>',
+    '<div class="dpv3-steps">',
+    '<div class="dpv3-step"><div class="dpv3-step-num">1.</div><div class="dpv3-step-title">Co je nad benchmarkem?</div><br><div class="dpv3-step-text">Kde firma dopadla lépe než relevantní srovnání?</div></div>',
+    '<div class="dpv3-step"><div class="dpv3-step-num">2.</div><div class="dpv3-step-title">Co je nad firemním průměrem?</div><br><div class="dpv3-step-text">Které týmy, oddělení nebo skupiny mají výrazně lepší výsledek než zbytek firmy?</div></div>',
+    '<div class="dpv3-step"><div class="dpv3-step-num">3.</div><div class="dpv3-step-title">Proč to funguje právě tam?</div><br><div class="dpv3-step-text">Nestačí říct, že výsledek je dobrý. Důležité je pochopit, jaké chování, návyky, procesy nebo styl vedení k němu vedou.</div></div>',
+    '<div class="dpv3-step"><div class="dpv3-step-num">4.</div><div class="dpv3-step-title">Jak to komunikovat?</div><br><div class="dpv3-step-text">Zaměstnancům jasně řekněte, co dopadlo dobře, poděkujte za otevřenou zpětnou vazbu a pojmenujte konkrétní silné stránky firmy.</div></div>',
+    '<div class="dpv3-step"><div class="dpv3-step-num">5.</div><div class="dpv3-step-title">Co se daří opakovaně?</div><br><div class="dpv3-step-text">Které silné stránky jsou stabilní, nejen jednorázové?</div></div>',
+
+    '</div>',
+    '</div>',
+    '<!------------ Doporučení 3 ----------------->',
+    '<div class="slide drivers-list-v3">',
+    '<div class="drv3-title">Méně akcí, větší <span class="accent-teal">dopad</span></div>',
+    '<div class="drv3-lead">',
+    'Cílem průzkumu není porazit benchmark. Cílem je, aby zaměstnanci viděli, že jejich zpětná vazba vede ke konkrétní změně. Stěžejní je vybrat realistický počet aktivit, které firma/organizace může posunout kupředu.',
+    '</div>',
+    '<div class="drv3-grid">',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Je výsledek slabý nebo se zhoršuje?</div>',
+    '<div class="drv3-item-text">',
+    'Zajímejte se hlavně o témata, která jsou nízko, klesají nebo se opakovaně vracejí.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Můžeme s tím reálně něco udělat?</div>',
+    '<div class="drv3-item-text">',
+    'Vyberte témata, u kterých lze během dalších měsíců nastavit konkrétní kroky, vlastníka a termín.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Týká se důležité skupiny lidí?</div>',
+    '<div class="drv3-item-text">',
+    'Nejde jen o procenta, ale i o proporci, velikost týmu a dopad na firmu.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Vytvořte pracovní skupinu/skupiny</div>',
+    '<div class="drv3-item-text">Vtáhněte do tvorby a řešení akčních kroků na konkrétních odděleních/týmech samotné zástupce ať už z řad vedoucích nebo dedikovaných pracovníků.</div>',
+    '</div>',
+    '<div class="drv3-item">',
+    '<div class="drv3-item-title">Souvisí téma s aktualní situací firmy?</div>',
+    '<div class="drv3-item-text">Jinou prioritu bude mít firma v růstu, jinou firma po změně vedení, jinou firma s vysokou fluktuací a jinou firma řešící výkon.</div>',
+    '</div>',
+    '</div>',
+    '</div>',
+    sep = "\n"
+  )
+  cat(slide_html, sep = "\n")
+}
+
+render_supporting_charts_section <- function(agenda_cfg) {
+  render_section_cover_slide(
+    agenda_cfg = agenda_cfg,
+    section_name = "Doprovodné grafy",
+    title = "Doprovodné grafy",
+    copy = "V této závěrečné části najdete doprovodné grafy, které rozšiřují hlavní zjištění reportu a slouží jako podklad pro detailnější interpretaci výsledků."
+  )
+}
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+render_problematic_section(agenda_cfg)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+render_multiple_choice_section(agenda_cfg)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+render_final_summary_section(agenda_cfg)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+if (is_firma_report) {
+  render_supporting_charts_section(agenda_cfg)
+}
+```
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_driver_odd_slides(spise_ano_odd, nr_drivers)
+}
+```
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_driver_odd_slides(nevim_odd, nr_drivers)
+}
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_driver_odd_slides(spise_ne_odd, nr_drivers)
+}
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| results: asis
+
+if (is_firma_report) {
+  render_driver_odd_slides(urc_ne_odd, nr_drivers)
+}
+```

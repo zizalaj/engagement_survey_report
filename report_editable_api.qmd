@@ -5,6 +5,8 @@ format:
     self-contained: true
     css:
       - styles_editable.css
+    include-in-header:
+      - html_includes/head-favicon.html
     toc: false
     number-sections: false
     page-layout: full
@@ -1548,11 +1550,18 @@ agenda_vector <- c(horsi_vysledky_present, mc_present, openend_present)
 
 build_agenda <- function(x) {
   
-  base_sections <- c(
-    "Průzkum v číslech",
-    "Výsledky engagementu",
-    "Výsledky jednotlivých driverů"
-  )
+  if (is_firma_report) {
+    base_sections <- c(
+      "Průzkum v číslech",
+      "Výsledky engagementu",
+      "Výsledky jednotlivých driverů"
+    )
+  } else {
+    base_sections <- c(
+      "Výsledky engagementu",
+      "Výsledky jednotlivých driverů"
+    )
+  }
   
   optional_sections <- c()
   
@@ -1634,6 +1643,33 @@ get_progress <- function(agenda_cfg, section_name) {
 get_section_badge <- function(agenda_cfg, section_name) {
   sprintf("%02d", match(section_name, agenda_cfg$sections))
 }
+
+render_section_cover_slide <- function(agenda_cfg, section_name, title, copy) {
+  section_progress <- get_progress(agenda_cfg, section_name)
+
+  slide_html <- knitr::knit_expand(
+    text = paste(
+      '<div class="slide section-slide section-slide--pvc">',
+      '<div class="section-left-bleed" aria-hidden="true"></div>',
+      '<div class="section-right-bleed" aria-hidden="true"></div>',
+      '<div class="section-bottom-bleed" aria-hidden="true"></div>',
+      '<div class="section-number">{{badge}}</div>',
+      '<div class="section-title">{{title}}</div>',
+      '<div class="section-description">{{copy}}</div>',
+      '<div class="scv-progress">',
+      '{{progress}}',
+      '</div>',
+      '</div>',
+      sep = "\n"
+    ),
+    badge = get_section_badge(agenda_cfg, section_name),
+    title = title,
+    copy = copy,
+    progress = progress_rectangles(section_progress$filled, section_progress$total)
+  )
+
+  cat(slide_html, sep = "\n")
+}
 ```
 
 <div class="slide agenda-slide section-slide--pvc"> 
@@ -1667,34 +1703,24 @@ cat(progress_rectangles(agenda_progress_filled, agenda_progress_total))
 
 <!---- Průzkum v číslech sekce ----->
 
-<div class="slide section-slide section-slide--pvc">
-
-<div class="section-left-bleed" aria-hidden="true"></div>
-<div class="section-right-bleed" aria-hidden="true"></div>
-<div class="section-bottom-bleed" aria-hidden="true"></div>
-
-<div class="section-number">01</div>
-
-<div class="section-title">Průzkum v číslech</div>
-
-<div class="section-description">
-Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě.
-Ukážeme Vám např. kolik zaměstnanců se průzkumu zúčastnilo celkově,
-za jednotlivé organizační jednotky nebo podle demografických údajů.
-</div>
-
-<div class="scv-progress">
 ```{r}
 #| echo: false
 #| results: asis
 
-pvc_progress <- get_progress(agenda_cfg, "Průzkum v číslech")
-
-cat(progress_rectangles(pvc_progress$filled, pvc_progress$total))
+if (is_firma_report) {
+  render_section_cover_slide(
+    agenda_cfg = agenda_cfg,
+    section_name = "Průzkum v číslech",
+    title = "Průzkum v číslech",
+    copy = paste(
+      "Tato sekce poskytuje základní přehled o průběhu průzkumu ve firmě.",
+      "Ukážeme Vám např. kolik zaměstnanců se průzkumu zúčastnilo celkově,",
+      "za jednotlivé organizační jednotky nebo podle demografických údajů.",
+      sep = "\n"
+    )
+  )
+}
 ```
-</div>
-
-</div>
 
 
 
@@ -1705,7 +1731,7 @@ cat(progress_rectangles(pvc_progress$filled, pvc_progress$total))
 #| results: asis
 
 if (is_department_report) {
-  cat('<style>.survey-numbers-slide .company-only{display:none !important;}</style>')
+  cat('<style>.survey-numbers-slide{display:none !important;}</style>')
 }
 ```
 
@@ -1899,40 +1925,21 @@ ggplot(doba_souhrn, aes(doba, pocet))+
 
 <!-------- Výsledky engagementu oddělovač sekce ------------->
 
-
-<div class="slide section-slide section-slide--pvc">
-
-<div class="section-left-bleed" aria-hidden="true"></div>
-<div class="section-right-bleed" aria-hidden="true"></div>
-<div class="section-bottom-bleed" aria-hidden="true"></div>
-
-<div class="section-number">02</div>
-
-<div class="section-title">Výsledky engagementu</div>
-
-<div class="section-description">
-<p>
-Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk dokáže do své práce ponořit, jak pro svou práci/ firmu/kolegy udělá o krok navíc či jednoduše, jak moc jej práce baví a těší.
-</p>
-
-<p>
-Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdílných metrik – Engagement indexu a Individuální míry engagementu. Výpočet obou metrik Vám dále vysvětlíme a odprezentujeme.
-</p>
-
-</div>
-
-<div class="scv-progress">
 ```{r}
 #| echo: false
 #| results: asis
 
-eng_progress <- get_progress(agenda_cfg, "Výsledky engagementu")
-
-cat(progress_rectangles(eng_progress$filled, eng_progress$total))
+render_section_cover_slide(
+  agenda_cfg = agenda_cfg,
+  section_name = "Výsledky engagementu",
+  title = "Výsledky engagementu",
+  copy = paste(
+    "<p>Engagement popisuje vztahy uvnitř firmy. Vztahy mezi zaměstnanci navzájem nebo zaměstnanců k jejich práci. Vyjadřuje, jak moc se člověk dokáže do své práce ponořit, jak pro svou práci/ firmu/kolegy udělá o krok navíc či jednoduše, jak moc jej práce baví a těší.</p>",
+    "<p>Engagement je komplexní téma. Právě proto jej měřímě pomocí dvou rozdílných metrik – Engagement indexu a Individuální míry engagementu. Výpočet obou metrik Vám dále vysvětlíme a odprezentujeme.</p>",
+    sep = "\n"
+  )
+)
 ```
-</div>
-
-</div>
 
 
 <!-- Metriky engagementu ---->
@@ -2127,24 +2134,24 @@ Individuální míra engagementu ukazuje, kolik lidí ve firmě je skutečně pl
 <div class="jakcist-kpi">
 <div class="jakcist-kpi-title">Engaged</div>
 <div class="jakcist-kpi-value accent-teal">42 %</div>
-<p class="jakcist-kpi-desc">42 % engaged zaměstnanců = kolik % zaměstnanců spadá do kategorie engaged. Engaged zaměstnanec je každý, kdo má průměrné skóre engagementových otázek 1,2 a méně.</p>
+<p class="jakcist-kpi-desc">42 % engaged zaměstnanců = kolik % zaměstnanců spadá do kategorie engaged. Engaged zaměstnanec je každý, kdo má průměrné skóre engagementových otázek <strong>1,2 a méně.</strong></p>
 </div>
 <div class="jakcist-kpi">
 <div class="jakcist-kpi-title">Potentials</div>
 <div class="jakcist-kpi-value accent-grey">33 %</div>
-<p class="jakcist-kpi-desc">33 % potential zamestnancu = kolik % zaměstnanců spadá do kategorie engaged. Engaged zaměstnanec je každý, kdo má pruměrné skóre engagementových otázek mezi 1,2 a 2,5.</p>
+<p class="jakcist-kpi-desc">33 % potential zamestnancu = kolik % zaměstnanců spadá do kategorie engaged. Engaged zaměstnanec je každý, kdo má pruměrné skóre engagementových otázek <strong>mezi 1,2 a 2,5.</strong></p>
 </div>
 <div class="jakcist-kpi">
 <div class="jakcist-kpi-title">Disengaged</div>
 <div class="jakcist-kpi-value accent-pink">25 %</div>
-<p class="jakcist-kpi-desc">25 % disengaged zaměstnanců = kolik % zaměstnanců spadá do kategorie disengaged. Engaged zaměstnanec je každý, kdo má pruměrné skóre engagementových otázek 2,5 a více.</p>
+<p class="jakcist-kpi-desc">25 % disengaged zaměstnanců = kolik % zaměstnanců spadá do kategorie disengaged. Engaged zaměstnanec je každý, kdo má pruměrné skóre engagementových otázek <strong>2,5 a více.</strong></p>
 </div>
 </div>
 </div>
 <div class="jakcist-right">
 <div class="jakcist-right-title">Příklad:</div>
 <p class="jakcist-example">Respondent odpovědel na engagementové otázky:<br><em>Určitě ano, Určitě ano, Spíše ano, Spíše ano.</em></p>
-<p class="jakcist-example">Jeho/její průměr = (1+1+2+2)/4 = <strong>1,5</strong><br>Respondent patří mezi potential zaměstnance.</p>
+<p class="jakcist-example">Jeho/její průměr = (1+1+2+2)/4 = <strong>1,5</strong><br>Respondent patří mezi potenciálně angažované zaměstnance.</p>
 </div>
 </div>
 </div>
@@ -2192,10 +2199,11 @@ Je zde vysoká pravděpodobnost nadstandardního výkonu a ochoty jít nad ráme
 </div>
 <div class="ei-bench">
 <div class="ei-card-title">Benchmarky: </div>
-`r if (is_department_report) sprintf('<div class="ei-bench-item"><div class="ei-bench-value">%s %%</div><div class="ei-kpi-head">Firma</div></div>', uplny_engagement_firma) else ""`
-<div class="ei-bench-item"><div class="ei-bench-value">`r bench_cr_val` %</div><div class="ei-kpi-head">`r bench_cr_name`</div></div>
-<div class="ei-bench-item"><div class="ei-bench-value">`r bench_us_val` %</div><div class="ei-kpi-head">`r bench_us_name`</div></div>
-<div class="ei-bench-item"><div class="ei-bench-value">`r bench_ger_val` %</div><div class="ei-kpi-head">`r bench_ger_name`</div></div>
+`r if (is_department_report) sprintf('<div class="ei-bench-item"><div class="ei-bench-value">%s %%</div><div class="ei-kpi-head">Firma</div></div>', uplny_engagement_firma) else paste0(
+  '<div class="ei-bench-item"><div class="ei-bench-value">', bench_cr_val, ' %</div><div class="ei-kpi-head">', bench_cr_name, '</div></div>',
+  '<div class="ei-bench-item"><div class="ei-bench-value">', bench_us_val, ' %</div><div class="ei-kpi-head">', bench_us_name, '</div></div>',
+  '<div class="ei-bench-item"><div class="ei-bench-value">', bench_ger_val, ' %</div><div class="ei-kpi-head">', bench_ger_name, '</div></div>'
+)`
 </div>
 </div>
 <div class="ei-legend">
@@ -2384,27 +2392,21 @@ if (is_firma_report) {
 
 
 <!-- Drivery engagementu oddelovac sekce -->
-<div class="slide section-slide section-slide--pvc">
-<div class="section-left-bleed" aria-hidden="true"></div>
-<div class="section-right-bleed" aria-hidden="true"></div>
-<div class="section-bottom-bleed" aria-hidden="true"></div>
-<div class="section-number">03</div>
-<div class="section-title">Výsledky klíčových driverů</div>
-<div class="section-description">
-Engagement neexistuje ve vakuu. Výsledky engagementu mohou být značně ovlivněny různými klíčovými tématy, tzv. drivery engagementu.
-Moduly zařazené do průzkumu jsou aktuálními daty podložené významné drivery engagementu.
-</div>
-<div class="scv-progress">
 ```{r}
 #| echo: false
 #| results: asis
 
-dri_progress <- get_progress(agenda_cfg, "Výsledky jednotlivých driverů")
-
-cat(progress_rectangles(dri_progress$filled, dri_progress$total))
+render_section_cover_slide(
+  agenda_cfg = agenda_cfg,
+  section_name = "Výsledky jednotlivých driverů",
+  title = "Výsledky klíčových driverů",
+  copy = paste(
+    "Engagement neexistuje ve vakuu. Výsledky engagementu mohou být značně ovlivněny různými klíčovými tématy, tzv. drivery engagementu.",
+    "Moduly zařazené do průzkumu jsou aktuálními daty podložené významné drivery engagementu.",
+    sep = "\n"
+  )
+)
 ```
-</div>
-</div>
 
 <!------------ Sledovane drivery ----------------->
 
@@ -2998,9 +3000,9 @@ render_driver_odd_slides <- function(detail_odd_df, total_pages) {
     '```',
     '</div>',
     '<div class="drvodd-legend">',
-    '<div class="drvodd-legend-label">Škála odpovědí</div>',
-    '<div class="drvodd-legend-item"><svg class="drvodd-swatch-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="4" ry="4" fill="{{oddeleni_color}}"></rect></svg>Míra spokojenosti za oddělení</div>',
-    '<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Míra spokojenosti za firmu</div>',
+    '<div class="drvodd-legend-label">Legenda</div>',
+    '<div class="drvodd-legend-item"><svg class="drvodd-swatch-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="4" ry="4" fill="{{oddeleni_color}}"></rect></svg>Výsledek za oddělení</div>',
+    '<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Výsledek za firmu</div>',
     '</div>',
     '</div>',
     sep = "\n"
@@ -3782,33 +3784,6 @@ render_multiple_choice_result_slides <- function(mc_pages) {
 
 #####################################
 #####rendering functions
-
-render_section_cover_slide <- function(agenda_cfg, section_name, title, copy) {
-  section_progress <- get_progress(agenda_cfg, section_name)
-
-  slide_html <- knitr::knit_expand(
-    text = paste(
-      '<div class="slide section-slide section-slide--pvc">',
-      '<div class="section-left-bleed" aria-hidden="true"></div>',
-      '<div class="section-right-bleed" aria-hidden="true"></div>',
-      '<div class="section-bottom-bleed" aria-hidden="true"></div>',
-      '<div class="section-number">{{badge}}</div>',
-      '<div class="section-title">{{title}}</div>',
-      '<div class="section-description">{{copy}}</div>',
-      '<div class="scv-progress">',
-      '{{progress}}',
-      '</div>',
-      '</div>',
-      sep = "\n"
-    ),
-    badge = get_section_badge(agenda_cfg, section_name),
-    title = title,
-    copy = copy,
-    progress = progress_rectangles(section_progress$filled, section_progress$total)
-  )
-
-  cat(slide_html, sep = "\n")
-}
 
 render_problematic_section <- function(agenda_cfg) {
   if (!horsi_vysledky_present) {
