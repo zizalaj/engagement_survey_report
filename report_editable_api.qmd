@@ -35,7 +35,7 @@ params:
 <div class="main accent">Engagement průzkum</div>
 
 <div class="subtitle-wrap">
-<div class="subtitle">Manažerský výstup</div>
+<div class="subtitle">`r if (!is.null(params$report_type) && length(params$report_type) > 0 && identical(tolower(as.character(params$report_type[[1]])), "oddeleni")) "Výstup oddělení" else "Manažerský výstup"`</div>
 <!-- Reserved empty space for later blurred logo insert -->
 <div class="reserved-logo-space" aria-hidden="true"></div>
 </div>
@@ -2408,6 +2408,39 @@ render_section_cover_slide(
 )
 ```
 
+
+<!------------ Sledovane drivery ----------------->
+
+<div class="slide drivers-list-v3">
+<div class="drv3-title">Měřené/sledované <span class="accent-teal">drivery</span></div>
+<div class="drv3-lead">
+Diky neustálému sledování trendů v oblasti engagementu a analýze našich dat jsme vybrali moduly, které jsou podle nás nejvýznamnějšími drivery engagementu. Pojďme si je teď podrobněji představit
+</div>
+
+<div class="drv3-grid">
+
+<div class="drv3-item">
+<div class="drv3-item-title">Já a tým</div>
+<div class="drv3-item-text">Tento driver hodnotí kvalitu spolupráce a vztahů uvnitř týmu nebo oddělení. Sleduje vzájemnou důvěru, otevřenost při řešení chyb a schopnost hledat taková řešení, aby se problémy neopakovaly. Zahrnuje také srozumitelnost týmových cílů a prostor pro zapojení nápadů zaměstnanců. Ukazuje, zda tým funguje jako bezpečné a spolupracující prostředí. Nízké skóre může znamenat slabou důvěru, nejasné cíle nebo omezenou možnost ovlivňovat fungování týmu.</div>
+</div>
+
+<div class="drv3-item">
+<div class="drv3-item-title">Já a vedoucí</div>
+<div class="drv3-item-text">Tento driver hodnotí kvalitu vztahu mezi zaměstnancem a jeho přímým nadřízeným. Sleduje důvěru, podporu, otevřenost a schopnost vedoucího dávat směr. Zahrnuje také férovost rozhodování a schopnost řešit problémy. Ukazuje, zda vedení posiluje motivaci a stabilitu týmu. Nízké skóre může znamenat slabou komunikaci, nedostatek podpory nebo nejistotu v řízení.</div>
+</div>
+
+
+<div class="drv3-item">
+<div class="drv3-item-title">Já a práce</div>
+<div class="drv3-item-text">
+Tento driver se zaměřuje na to, jak zaměstnanec vnímá svou každodenní práci. Sleduje, zda má dostatek zdrojů, jasné procesy a podmínky pro kvalitní výkon. Zahrnuje také míru samostatnosti, iniciativy a možnosti ovlivnit své pracovní prostředí. Ukazuje, zda práce dává smysl a umožňuje lidem být efektivní. Nízké skóre často signalizuje překážky v systému, nejasné role nebo nedostatek podpory</div>
+</div>
+
+
+</div>
+</div>
+
+
 <!------------ Sledovane drivery ----------------->
 
 <div class="slide drivers-list-v3">
@@ -2416,31 +2449,34 @@ render_section_cover_slide(
 Diky neustálému sledování trendů v oblasti engagementu a analýze našich dat jsme vybrali moduly, které jsou podle nás nejvýznamnějšími drivery engagementu. Pojďme si je teď podrobněji představit
 </div>
 <div class="drv3-grid">
-<div class="drv3-item">
-<div class="drv3-item-title">Já a práce</div>
-<div class="drv3-item-text">
-Tento driver se zaměřuje na to, jak zaměstnanec vnímá svou každodenní práci. Sleduje, zda má dostatek zdrojů, jasné procesy a podmínky pro kvalitní výkon. Zahrnuje také míru samostatnosti, iniciativy a možnosti ovlivnit své pracovní prostředí. Ukazuje, zda práce dává smysl a umožňuje lidem být efektivní. Nízké skóre často signalizuje překážky v systému, nejasné role nebo nedostatek podpory.​</div>
-</div>
+
 <div class="drv3-item">
 <div class="drv3-item-title">Já a rozvoj</div>
 <div class="drv3-item-text">
 Tento driver se zaměřuje na možnosti růstu a učení. Sleduje, zda mají zaměstnanci příležitost rozvíjet své dovednosti a posouvat se dál. Zahrnuje kvalitu zpětné vazby, podporu rozvoje i jasnost kariérních možností. Ukazuje, zda lidé vidí ve firmě perspektivu. Nízké skóre může znamenat stagnaci, nejasné očekávání nebo nedostatek podpory v růstu.</div>
 </div>
+
 <div class="drv3-item">
 <div class="drv3-item-title">Já a firma</div>
 <div class="drv3-item-text">
 Tento driver sleduje vztah zaměstnance k organizaci jako celku. Zahrnuje důvěru ve směřování firmy, srozumitelnost cílů a kvalitu interní komunikace. Zaměřuje se také na hodnoty a míru sounáležitosti. Ukazuje, zda lidé firmě věří a chtějí s ní spojit svou budoucnost. Nízké skóre může naznačovat nejistotu, slabou komunikaci nebo oslabenou loajalitu.</div>
 </div>
+
 <div class="drv3-item">
-<div class="drv3-item-title">Já a výkon</div>
-<div class="drv3-item-text">Tento driver sleduje, jak jasně jsou nastavené cíle, očekávání a standardy výkonu. Zaměřuje se na to, zda lidé vědí, co se od nich očekává a jak jejich práce přispívá k výsledkům firmy. Zahrnuje také spravedlivost hodnocení a zpětnou vazbu k výkonu. Ukazuje, zda systém podporuje vysoký výkon. Nízké skóre často signalizuje nejasné priority nebo slabé řízení výkonu.</div>
-</div>
-<div class="drv3-item">
-<div class="drv3-item-title">Já a vedoucí</div>
+<div class="drv3-item-title">Já a interní komunikace</div>
 <div class="drv3-item-text">Tento driver hodnotí kvalitu vztahu mezi zaměstnancem a jeho přímým nadřízeným. Sleduje důvěru, podporu, otevřenost a schopnost vedoucího dávat směr. Zahrnuje také férovost rozhodování a schopnost řešit problémy. Ukazuje, zda vedení posiluje motivaci a stabilitu týmu. Nízké skóre může znamenat slabou komunikaci, nedostatek podpory nebo nejistotu v řízení.</div>
 </div>
+
+<div class="drv3-item">
+<div class="drv3-item-title">Já a bezpečnost</div>
+<div class="drv3-item-text">Tento driver hodnotí vnímání bezpečnosti při výkonu práce. Sleduje, zda zaměstnanci rozumí bezpečnostním předpisům, mají potřebné informace a vědí, jak postupovat při hlášení rizik nebo incidentů. Zahrnuje také dostupnost vhodných prostředků a podmínek pro bezpečnou práci. Ukazuje, zda je bezpečnost ve firmě brána vážně a zda lidé dodržování pravidel skutečně podporují. Nízké skóre může znamenat nedostatečnou informovanost, chybějící prostředky nebo slabou bezpečnostní kulturu.</div>
+</div>
+
 </div>
 </div>
+
+
+
 
 <!----------- Prezentace driveru ------------------->
 
