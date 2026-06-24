@@ -25,6 +25,8 @@ params:
   report_type: "firma"
   oddeleni_report: null
   demografie: "Demografické otázky"
+  demografie_filter_ref: null
+  demografie_filter_values: null
 ---
 
 <!---------- Úvodní slide ---------->
@@ -124,6 +126,9 @@ driver_benchmark_current_label <- if (is_department_report && !is.na(oddeleni_re
 
 manual_total_employees <- suppressWarnings(as.numeric(params$celkem_zamestnancu %||% 5))
 oddeleni_manual_raw <- params$oddeleni_manual %||% NULL
+demografie_filter_ref <- as.character((params$demografie_filter_ref %||% NA_character_)[[1]])
+if (is.na(demografie_filter_ref)) demografie_filter_ref <- ""
+demografie_filter_values <- normalize_demography_filter_values(params$demografie_filter_values %||% NULL)
 tf_token <- get_typeform_token(here::here("token.txt"))
 
 
@@ -708,6 +713,20 @@ build_report_context <- function(df,
 }
 
 df_firma <- final_long_df
+
+if (nzchar(demografie_filter_ref) && length(demografie_filter_values) > 0) {
+  df_firma <- apply_demography_filter(
+    final_long_df = df_firma,
+    demography_group_title = params$demografie,
+    question_ref = demografie_filter_ref,
+    filter_values = demografie_filter_values
+  )
+
+  if (dplyr::n_distinct(df_firma$respondent_id) == 0) {
+    stop("No respondents found for selected demography filter.")
+  }
+}
+
 oddeleni_manual_df <- normalize_oddeleni_manual(oddeleni_manual_raw)
 company_context <- build_report_context(
   df_firma,

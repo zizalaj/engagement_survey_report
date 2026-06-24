@@ -245,6 +245,130 @@ normalize_oddeleni_manual <- function(oddeleni_manual) {
     )
 }
 
+available_demography_filter_questions <- function(final_long_df,
+                                                  demography_group_title = NA_character_,
+                                                  oddeleni_expr = "(?i)odd") {
+  empty_result <- tibble::tibble(
+    otazka_ref = character(),
+    otazka_title = character()
+  )
+  demography_group_title <- as.character(demography_group_title %||% "")[[1]]
+  if (is.na(demography_group_title)) demography_group_title <- ""
+
+  if (is.null(final_long_df) || nrow(final_long_df) == 0 || !nzchar(demography_group_title)) {
+    return(empty_result)
+  }
+
+  filterable_questions <- final_long_df %>%
+    dplyr::filter(
+      .data$group_title == .env$demography_group_title,
+      .data$typ_otazky %in% c("choice", "multiple_choice"),
+      !is.na(.data$otazka_ref),
+      nzchar(.data$otazka_ref),
+      !is.na(.data$otazka_title),
+      nzchar(.data$otazka_title)
+    ) %>%
+    dplyr::distinct(.data$otazka_ref, .data$otazka_title)
+
+  oddeleni_ot <- find_department_question(
+    unique(filterable_questions$otazka_title),
+    oddeleni_expr = oddeleni_expr
+  )
+
+  if (!is.na(oddeleni_ot)) {
+    filterable_questions <- filterable_questions %>%
+      dplyr::filter(.data$otazka_title != .env$oddeleni_ot)
+  }
+
+  filterable_questions %>%
+    dplyr::arrange(.data$otazka_title)
+}
+
+available_demography_filter_values <- function(final_long_df,
+                                               demography_group_title = NA_character_,
+                                               question_ref = NA_character_) {
+  demography_group_title <- as.character(demography_group_title %||% "")[[1]]
+  question_ref <- as.character(question_ref %||% "")[[1]]
+  if (is.na(demography_group_title)) demography_group_title <- ""
+  if (is.na(question_ref)) question_ref <- ""
+
+  if (is.null(final_long_df) || nrow(final_long_df) == 0) {
+    return(character())
+  }
+
+  if (!nzchar(demography_group_title) || !nzchar(question_ref)) {
+    return(character())
+  }
+
+  final_long_df %>%
+    dplyr::filter(
+      .data$group_title == .env$demography_group_title,
+      .data$otazka_ref == .env$question_ref,
+      .data$typ_otazky %in% c("choice", "multiple_choice"),
+      !is.na(.data$odpoved_hodnota),
+      nzchar(trimws(.data$odpoved_hodnota))
+    ) %>%
+    dplyr::distinct(.data$odpoved_hodnota) %>%
+    dplyr::arrange(.data$odpoved_hodnota) %>%
+    dplyr::pull(.data$odpoved_hodnota) %>%
+    as.character()
+}
+
+normalize_demography_filter_values <- function(filter_values) {
+  if (is.null(filter_values) || length(filter_values) == 0) {
+    return(character())
+  }
+
+  normalized <- filter_values
+
+  if (is.character(normalized) && length(normalized) == 1) {
+    normalized <- tryCatch(
+      jsonlite::fromJSON(normalized, simplifyVector = TRUE),
+      error = function(e) normalized
+    )
+  }
+
+  normalized <- unlist(normalized, recursive = TRUE, use.names = FALSE)
+  normalized <- as.character(normalized)
+  normalized <- trimws(normalized)
+  normalized <- normalized[!is.na(normalized) & nzchar(normalized)]
+
+  unique(normalized)
+}
+
+apply_demography_filter <- function(final_long_df,
+                                    demography_group_title = NA_character_,
+                                    question_ref = NA_character_,
+                                    filter_values = NULL) {
+  demography_group_title <- as.character(demography_group_title %||% "")[[1]]
+  question_ref <- as.character(question_ref %||% "")[[1]]
+  if (is.na(demography_group_title)) demography_group_title <- ""
+  if (is.na(question_ref)) question_ref <- ""
+  normalized_values <- normalize_demography_filter_values(filter_values)
+
+  if (is.null(final_long_df) || nrow(final_long_df) == 0) {
+    return(final_long_df)
+  }
+
+  if (!nzchar(demography_group_title) || !nzchar(question_ref) || length(normalized_values) == 0) {
+    return(final_long_df)
+  }
+
+  selected_respondents <- final_long_df %>%
+    dplyr::filter(
+      .data$group_title == .env$demography_group_title,
+      .data$otazka_ref == .env$question_ref,
+      .data$typ_otazky %in% c("choice", "multiple_choice"),
+      .data$odpoved_hodnota %in% .env$normalized_values
+    ) %>%
+    dplyr::distinct(.data$respondent_id) %>%
+    dplyr::pull(.data$respondent_id) %>%
+    as.character()
+
+  final_long_df %>%
+    dplyr::filter(.data$respondent_id %in% .env$selected_respondents)
+}
+
 extract_return_rate_inputs <- function(final_long_df,
                                        demography_group_title = NA_character_,
                                        celkem_zamestnancu = NA_real_,

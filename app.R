@@ -170,6 +170,18 @@ ui <- shiny::fluidPage(
         choices = c("Vyberte skupinu" = ""),
         selected = ""
       ),
+      shiny::selectInput(
+        "demography_filter_question",
+        "Otazka pro filtr",
+        choices = c("Bez filtru" = ""),
+        selected = ""
+      ),
+      shiny::checkboxGroupInput(
+        "demography_filter_values",
+        "Hodnoty filtru",
+        choices = character(),
+        selected = character()
+      ),
       shiny::numericInput(
         "celkem_zamestnancu",
         "Celkovy pocet zamestnancu",
@@ -254,12 +266,142 @@ server <- function(input, output, session) {
     shiny::updateCheckboxGroupInput(session, "selected_departments", choices = character(), selected = character())
   }
 
+  update_demography_filter_question_choices <- function(demography_group_title = "",
+                                                        selected_question = "") {
+    demography_group_title <- as.character(demography_group_title %||% "")[[1]]
+    selected_question <- as.character(selected_question %||% "")[[1]]
+    if (is.na(demography_group_title)) demography_group_title <- ""
+    if (is.na(selected_question)) selected_question <- ""
+
+    questions <- available_demography_filter_questions(
+      final_long_df = form_data_rv(),
+      demography_group_title = demography_group_title,
+      oddeleni_expr = department_question_pattern
+    )
+
+    question_choices <- c("Bez filtru" = "")
+
+    if (nrow(questions) > 0) {
+      question_choices <- c(
+        question_choices,
+        stats::setNames(as.character(questions$otazka_ref), as.character(questions$otazka_title))
+      )
+    }
+
+    if (!nzchar(selected_question) || !selected_question %in% unname(question_choices)) {
+      selected_question <- ""
+    }
+
+    shiny::updateSelectInput(
+      session,
+      "demography_filter_question",
+      choices = question_choices,
+      selected = selected_question
+    )
+  }
+
+  update_demography_filter_value_choices <- function(demography_group_title = input$demography_group %||% "",
+                                                     question_ref = input$demography_filter_question %||% "",
+                                                     selected_values = character()) {
+    demography_group_title <- as.character(demography_group_title %||% "")[[1]]
+    question_ref <- as.character(question_ref %||% "")[[1]]
+    if (is.na(demography_group_title)) demography_group_title <- ""
+    if (is.na(question_ref)) question_ref <- ""
+
+    values <- available_demography_filter_values(
+      final_long_df = form_data_rv(),
+      demography_group_title = demography_group_title,
+      question_ref = question_ref
+    )
+
+    selected_values <- intersect(normalize_demography_filter_values(selected_values), values)
+
+    shiny::updateCheckboxGroupInput(
+      session,
+      "demography_filter_values",
+      choices = stats::setNames(values, values),
+      selected = selected_values
+    )
+  }
+
+  reset_demography_filter_inputs <- function(demography_group_title = "") {
+    update_demography_filter_question_choices(
+      demography_group_title = demography_group_title,
+      selected_question = ""
+    )
+    update_demography_filter_value_choices(
+      demography_group_title = demography_group_title,
+      question_ref = "",
+      selected_values = character()
+    )
+  }
+
+  resolve_filtered_form_data <- function(demography_group_title = input$demography_group %||% "") {
+    final_long_df <- form_data_rv()
+    demography_group_title <- as.character(demography_group_title %||% "")[[1]]
+    question_ref <- as.character(input$demography_filter_question %||% "")[[1]]
+    if (is.na(demography_group_title)) demography_group_title <- ""
+    if (is.na(question_ref)) question_ref <- ""
+    filter_values <- normalize_demography_filter_values(input$demography_filter_values %||% character())
+    filter_active <- !is.null(final_long_df) &&
+      nzchar(demography_group_title) &&
+      nzchar(question_ref) &&
+      length(filter_values) > 0
+
+    if (is.null(final_long_df)) {
+      return(list(
+        data = NULL,
+        active = FALSE,
+        empty = FALSE,
+        question_ref = question_ref,
+        values = filter_values
+      ))
+    }
+
+    if (!filter_active) {
+      return(list(
+        data = final_long_df,
+        active = FALSE,
+        empty = FALSE,
+        question_ref = question_ref,
+        values = filter_values
+      ))
+    }
+
+    filtered_df <- apply_demography_filter(
+      final_long_df = final_long_df,
+      demography_group_title = demography_group_title,
+      question_ref = question_ref,
+      filter_values = filter_values
+    )
+
+    respondent_count <- if ("respondent_id" %in% names(filtered_df)) {
+      dplyr::n_distinct(filtered_df$respondent_id)
+    } else {
+      0L
+    }
+
+    list(
+      data = filtered_df,
+      active = TRUE,
+      empty = respondent_count == 0,
+      respondent_count = as.integer(respondent_count),
+      question_ref = question_ref,
+      values = filter_values
+    )
+  }
+
+  filtered_form_data_info <- shiny::reactive({
+    resolve_filtered_form_data()
+  })
+
   apply_demography_group <- function(demography_group_override = NULL) {
     form_id <- input$form_id %||% ""
     demography_group <- demography_group_override %||% input$demography_group %||% ""
-    final_long_df <- form_data_rv()
+    filtered_info <- resolve_filtered_form_data(demography_group)
+    final_long_df <- filtered_info$data
 
-    if (!nzchar(form_id) || is.null(final_long_df)) {
+    if (!nzchar(form_id) || is.null(form_data_rv())) {
       clear_current_preview()
       return()
     }
@@ -267,6 +409,12 @@ server <- function(input, output, session) {
     if (!nzchar(demography_group)) {
       clear_current_preview()
       status_rv("Vyberte skupinu demografickych informaci.")
+      return()
+    }
+
+    if (isTRUE(filtered_info$active) && isTRUE(filtered_info$empty)) {
+      clear_current_preview()
+      status_rv("Vybrany demograficky filtr neobsahuje zadne respondenty.")
       return()
     }
 
@@ -305,7 +453,11 @@ server <- function(input, output, session) {
       return()
     }
 
-    status_rv("Data formulare nactena. Rucni hodnoty jsou jen pro toto otevrene sezeni.")
+    if (isTRUE(filtered_info$active)) {
+      status_rv("Data formulare nactena. Aktivni demograficky filtr byl aplikovan.")
+    } else {
+      status_rv("Data formulare nactena. Rucni hodnoty jsou jen pro toto otevrene sezeni.")
+    }
   }
 
   load_forms <- function() {
@@ -339,6 +491,7 @@ server <- function(input, output, session) {
         selected = ""
       )
       form_data_rv(NULL)
+      reset_demography_filter_inputs("")
       clear_current_preview()
     }
   }
@@ -368,6 +521,7 @@ server <- function(input, output, session) {
         choices = c("Vyberte skupinu" = ""),
         selected = ""
       )
+      reset_demography_filter_inputs("")
       clear_current_preview()
       return()
     }
@@ -382,6 +536,7 @@ server <- function(input, output, session) {
         choices = c("Skupiny nenalezeny" = ""),
         selected = ""
       )
+      reset_demography_filter_inputs("")
       clear_current_preview()
       status_rv("Pro tento formular nebyly nalezeny dostupne skupiny.")
       return()
@@ -397,6 +552,7 @@ server <- function(input, output, session) {
       choices = c("Vyberte skupinu" = "", stats::setNames(groups, groups)),
       selected = selected_group
     )
+    reset_demography_filter_inputs(selected_group)
 
     if (!nzchar(selected_group)) {
       clear_current_preview()
@@ -416,6 +572,7 @@ server <- function(input, output, session) {
   })
 
   shiny::observeEvent(input$form_id, {
+    reset_demography_filter_inputs("")
     load_selected_form(input$form_id)
   }, ignoreNULL = TRUE)
 
@@ -430,6 +587,20 @@ server <- function(input, output, session) {
     saved_map[[form_id]] <- input$demography_group %||% ""
     demography_by_form_rv(saved_map)
 
+    reset_demography_filter_inputs(input$demography_group %||% "")
+    apply_demography_group()
+  }, ignoreNULL = FALSE)
+
+  shiny::observeEvent(input$demography_filter_question, {
+    update_demography_filter_value_choices(
+      demography_group_title = input$demography_group %||% "",
+      question_ref = input$demography_filter_question %||% "",
+      selected_values = character()
+    )
+    apply_demography_group()
+  }, ignoreNULL = FALSE)
+
+  shiny::observeEvent(input$demography_filter_values, {
     apply_demography_group()
   }, ignoreNULL = FALSE)
 
@@ -542,6 +713,7 @@ server <- function(input, output, session) {
 
     total_employees <- suppressWarnings(as.numeric(input$celkem_zamestnancu))
     dept_table <- current_table_rv()
+    filtered_info <- filtered_form_data_info()
     report_scope <- input$report_scope %||% "firma"
     selected_departments <- input$selected_departments %||% character()
     needs_company_report <- report_scope %in% c("firma", "oboji")
@@ -549,6 +721,11 @@ server <- function(input, output, session) {
 
     if (!nzchar(input$demography_group %||% "")) {
       shiny::showNotification("Vyberte skupinu demografickych informaci.", type = "error")
+      return()
+    }
+
+    if (isTRUE(filtered_info$active) && isTRUE(filtered_info$empty)) {
+      shiny::showNotification("Vybrany demograficky filtr neobsahuje zadne respondenty.", type = "error")
       return()
     }
 
@@ -607,7 +784,13 @@ server <- function(input, output, session) {
       form_id = input$form_id,
       demografie = input$demography_group,
       celkem_zamestnancu = total_employees,
-      oddeleni_manual = manual_json
+      oddeleni_manual = manual_json,
+      demografie_filter_ref = if (isTRUE(filtered_info$active)) input$demography_filter_question else NULL,
+      demografie_filter_values = if (isTRUE(filtered_info$active)) {
+        jsonlite::toJSON(as.character(filtered_info$values), auto_unbox = FALSE)
+      } else {
+        NULL
+      }
     )
 
     render_workspace <- create_render_workspace(
