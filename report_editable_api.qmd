@@ -29,6 +29,43 @@ params:
   demografie_filter_values: null
 ---
 
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+source(file.path("R", "typeform_helpers.R"), local = TRUE)
+
+escape_title_html <- function(text) {
+  escaped <- as.character(text)
+  escaped <- gsub("&", "&amp;", escaped, fixed = TRUE)
+  escaped <- gsub("<", "&lt;", escaped, fixed = TRUE)
+  escaped <- gsub(">", "&gt;", escaped, fixed = TRUE)
+  escaped <- gsub('"', "&quot;", escaped, fixed = TRUE)
+  escaped <- gsub("'", "&#39;", escaped, fixed = TRUE)
+  escaped
+}
+
+title_report_type <- tolower(as.character((params$report_type %||% "firma")[[1]]))
+title_oddeleni_report <- as.character((params$oddeleni_report %||% "")[[1]])
+if (is.na(title_oddeleni_report)) title_oddeleni_report <- ""
+title_filter_values <- normalize_demography_filter_values(params$demografie_filter_values %||% NULL)
+joined_title_filter_values <- escape_title_html(paste(title_filter_values, collapse = ", "))
+escaped_title_oddeleni_report <- escape_title_html(title_oddeleni_report)
+
+report_subtitle <- if (identical(title_report_type, "oddeleni")) {
+  if (length(title_filter_values) > 0) {
+    paste0("Výstup oddělení ", escaped_title_oddeleni_report, " – ", joined_title_filter_values)
+  } else {
+    paste0("Výstup oddělení ", escaped_title_oddeleni_report)
+  }
+} else if (length(title_filter_values) > 0) {
+  paste0("Výstup ", joined_title_filter_values)
+} else {
+  "Manažerský výstup"
+}
+```
+
 <!---------- Úvodní slide ---------->
 
 <div class="slide intro-slide">
@@ -37,7 +74,7 @@ params:
 <div class="main accent">Engagement průzkum</div>
 
 <div class="subtitle-wrap">
-<div class="subtitle">`r if (!is.null(params$report_type) && length(params$report_type) > 0 && identical(tolower(as.character(params$report_type[[1]])), "oddeleni")) "Výstup oddělení" else "Manažerský výstup"`</div>
+<div class="subtitle">`r report_subtitle`</div>
 <!-- Reserved empty space for later blurred logo insert -->
 <div class="reserved-logo-space" aria-hidden="true"></div>
 </div>
@@ -3056,8 +3093,8 @@ render_driver_odd_slides <- function(detail_odd_df, total_pages) {
     '</div>',
     '<div class="drvodd-legend">',
     '<div class="drvodd-legend-label">Legenda</div>',
-    '<div class="drvodd-legend-item"><svg class="drvodd-swatch-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="4" ry="4" fill="{{oddeleni_color}}"></rect></svg>Výsledek za oddělení</div>',
-    '<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Výsledek za firmu</div>',
+    '<div class="drvodd-legend-item"><svg class="drvodd-swatch-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="4" ry="4" fill="{{oddeleni_color}}"></rect></svg>Podíl odpovědi za oddělení</div>',
+    '<div class="drvodd-legend-item"><i class="drvodd-swatch grey"></i>Podíl odpovědi za firmu</div>',
     '</div>',
     '</div>',
     sep = "\n"
