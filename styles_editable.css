@@ -54,7 +54,7 @@
   --angled-font-size: 22px;
   --legend-padding: 10px 80px 8px 80px;
   --legend-gap: 24px;
-  --legend-items-gap: 20px;
+  --legend-items-gap: 22px;
   --legend-item-gap: 12px;
   --legend-label-size: 20px;
   --legend-item-size: 20px;
@@ -1404,6 +1404,7 @@ Metriky engagementu
   font-family:var(--Europa-Regular);
   font-size:var(--legend-item-size);
 }
+
 .eio-swatch{
   width:var(--legend-swatch-size);
   height:var(--legend-swatch-size);
@@ -1411,6 +1412,7 @@ Metriky engagementu
   flex:0 0 var(--legend-swatch-size);
   display:inline-block;
 }
+
 .eio-swatch.teal{background:var(--accent)}
 .eio-swatch.grey{background:#cfcfcf}
 .eio-swatch.pink{background:#f55ea4}

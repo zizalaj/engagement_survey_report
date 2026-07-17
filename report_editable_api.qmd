@@ -17,7 +17,7 @@ format:
       marks: none
 output-file: report_test.html
 params:
-  pruzkum: "LyMeitEC"
+  pruzkum: "r5VHgEYK"
   benchmarky: "m4MXWOXz"
   form_id: null
   celkem_zamestnancu: 5
@@ -317,6 +317,9 @@ survey_df_long <- dplyr::bind_rows(unlist(survey_data_preprocessed, recursive = 
 
 
 
+
+
+
 #######
 ######číselník skupin
 
@@ -413,8 +416,6 @@ final_long_df <- survey_df_long %>%
   left_join(ciselnik_df, by = "otazka_ref")%>%
   mutate(otazka_title = clean_text(otazka_title))
 
-
-
 ######### další zpracování - specifické pro engagement survey
 
 multiple_choice_extra <- final_long_df %>% 
@@ -510,6 +511,106 @@ openend_present <- include_openended(final_long_df)
 
 ####zpracování odpovědí
 
+first_non_missing <- function(x, default = NA_character_) {
+  values <- stats::na.omit(x)
+
+  if (length(values) == 0) {
+    return(default)
+  }
+
+  values[[1]]
+}
+
+build_optional_numeric_summary <- function(df, demografie_title) {
+  df %>%
+    filter(group_title == demografie_title & typ_otazky == "number") %>%
+    dplyr::select(respondent_id, odpoved_hodnota) %>%
+    mutate(odpoved_hodnota = suppressWarnings(as.numeric(odpoved_hodnota))) %>%
+    group_by(respondent_id) %>%
+    summarise(
+      odpoved_hodnota = first_non_missing(odpoved_hodnota, default = NA_real_),
+      .groups = "drop"
+    ) %>%
+    filter(!is.na(odpoved_hodnota)) %>%
+    count(odpoved_hodnota, name = "pocet") %>%
+    rename(vek = odpoved_hodnota)
+}
+
+build_optional_choice_summary <- function(zakl_info, question_title, value_name) {
+  empty_summary <- tibble::tibble(
+    odpoved_hodnota = character(),
+    pocet = integer()
+  )
+  names(empty_summary)[1] <- value_name
+
+  if (is.na(question_title) || !nzchar(question_title)) {
+    return(empty_summary)
+  }
+
+  summary_df <- zakl_info %>%
+    filter(otazka_title == question_title) %>%
+    group_by(respondent_id) %>%
+    summarise(
+      odpoved_hodnota = first_non_missing(odpoved_hodnota),
+      .groups = "drop"
+    ) %>%
+    filter(!is.na(odpoved_hodnota), nzchar(as.character(odpoved_hodnota))) %>%
+    count(odpoved_hodnota, name = "pocet")
+
+  names(summary_df)[1] <- value_name
+  summary_df
+}
+
+build_optional_seniority_summary <- function(zakl_info,
+                                             question_title,
+                                             az_expr,
+                                             do_expr,
+                                             vice_expr) {
+  empty_summary <- tibble::tibble(
+    doba = character(),
+    pocet = integer(),
+    az = integer()
+  )
+
+  if (is.na(question_title) || !nzchar(question_title)) {
+    return(empty_summary)
+  }
+
+  zakl_info %>%
+    filter(otazka_title == question_title) %>%
+    group_by(respondent_id) %>%
+    summarise(
+      odpoved_hodnota = first_non_missing(odpoved_hodnota),
+      .groups = "drop"
+    ) %>%
+    filter(!is.na(odpoved_hodnota), nzchar(as.character(odpoved_hodnota))) %>%
+    count(odpoved_hodnota, name = "pocet") %>%
+    mutate(
+      az = case_when(
+        str_detect(odpoved_hodnota, do_expr) == TRUE ~ 0,
+        str_detect(odpoved_hodnota, vice_expr) == TRUE ~ 100,
+        .default = suppressWarnings(as.integer(str_extract(odpoved_hodnota, az_expr)))
+      )
+    ) %>%
+    arrange(az) %>%
+    mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = unique(odpoved_hodnota))) %>%
+    rename(doba = odpoved_hodnota)
+}
+
+plot_missing_demography <- function(message = "Data nejsou k dispozici.") {
+  grid::grid.newpage()
+  grid::grid.text(
+    label = message,
+    x = 0.5,
+    y = 0.5,
+    gp = grid::gpar(
+      col = "#A5A5A5",
+      fontsize = 26,
+      fontfamily = "Europa"
+    )
+  )
+}
+
 ##### demografie
 
 zakl_info <- final_long_df %>%
@@ -552,7 +653,15 @@ oddeleni_expr <- "(?i)odd"
 
 oddeleni_index <- str_detect(zakl_info_otazky,oddeleni_expr)
 
-oddeleni_ot <- zakl_info_otazky[oddeleni_index]
+oddeleni_ot <- if (any(oddeleni_index, na.rm = TRUE)) {
+  as.character(zakl_info_otazky[oddeleni_index][[1]])
+} else {
+  NA_character_
+}
+
+if (is.na(oddeleni_ot) || !nzchar(oddeleni_ot)) {
+  stop("Department question not found in selected demography group.")
+}
 
 oddeleni <- zakl_info %>%
   filter(otazka_title == oddeleni_ot) %>%
@@ -572,14 +681,7 @@ odd_souhrn_long$oddeleni_trunc <- str_trunc(odd_souhrn_long$odpoved_hodnota,
 
 #### věk
 
-vek_souhrn <- final_long_df %>%
-  filter(group_title == params$demografie & typ_otazky == "number") %>%
-  dplyr::select(respondent_id,odpoved_hodnota) %>%
-  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota))%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  count(odpoved_hodnota,name = "pocet")%>%
-  rename(vek = odpoved_hodnota)
+vek_souhrn <- build_optional_numeric_summary(final_long_df, params$demografie)
 
 
 
@@ -589,15 +691,14 @@ pozice_expr <- "(?i)pozic"
 
 pozice_index <- str_detect(zakl_info_otazky, pozice_expr)
 
-pozice_ot <- zakl_info_otazky[pozice_index]
+pozice_ot <- if (any(pozice_index, na.rm = TRUE)) {
+  as.character(zakl_info_otazky[pozice_index][[1]])
+} else {
+  NA_character_
+}
 
 
-pozice_souhrn <- zakl_info %>%
-  filter(otazka_title == pozice_ot)%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  count(odpoved_hodnota,name="pocet")%>%
-  rename(pozice = odpoved_hodnota)
+pozice_souhrn <- build_optional_choice_summary(zakl_info, pozice_ot, "pozice")
 
 #### seniorita
 
@@ -611,21 +712,19 @@ vice_expr <- "(?i)vice"
 
 doba_index <- str_detect(zakl_info_otazky, doba_expr)
 
-doba_ot <- zakl_info_otazky[doba_index]
+doba_ot <- if (any(doba_index, na.rm = TRUE)) {
+  as.character(zakl_info_otazky[doba_index][[1]])
+} else {
+  NA_character_
+}
 
-doba_souhrn <- zakl_info %>%
-  filter(otazka_title == doba_ot)%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  count(odpoved_hodnota,name="pocet")%>%
-  mutate(az = case_when(
-    str_detect(odpoved_hodnota,do_expr) == T ~ 0,
-    str_detect(odpoved_hodnota,vice_expr) == T ~ 100,
-    .default = as.integer(str_extract(odpoved_hodnota,az_expr))
-  )) %>%
-  arrange(az) %>%
-  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = odpoved_hodnota))%>%
-  rename(doba=odpoved_hodnota)
+doba_souhrn <- build_optional_seniority_summary(
+  zakl_info,
+  doba_ot,
+  az_expr,
+  do_expr,
+  vice_expr
+)
 
 normalize_oddeleni_manual <- function(oddeleni_manual) {
   if (is.null(oddeleni_manual) || length(oddeleni_manual) == 0) {
@@ -692,7 +791,7 @@ build_report_context <- function(df,
                                  demografie_title,
                                  oddeleni_manual_df,
                                  employee_count,
-                                 oddeleni_expr = "(?i)odd") {
+                                  oddeleni_expr = "(?i)odd") {
   zakl_info <- df %>%
     filter(group_title == demografie_title & typ_otazky == "multiple_choice") %>%
     dplyr::select(odpoved_hodnota, otazka_title, respondent_id)
@@ -716,6 +815,18 @@ build_report_context <- function(df,
     odd_souhrn_long$odpoved_hodnota,
     width = 20,
     ellipsis = "..."
+  )
+
+  vek_souhrn <- build_optional_numeric_summary(df, demografie_title)
+  pozice_ot <- find_first_matching_question(zakl_info_otazky, pozice_expr)
+  pozice_souhrn <- build_optional_choice_summary(zakl_info, pozice_ot, "pozice")
+  doba_ot <- find_first_matching_question(zakl_info_otazky, doba_expr)
+  doba_souhrn <- build_optional_seniority_summary(
+    zakl_info,
+    doba_ot,
+    az_expr,
+    do_expr,
+    vice_expr
   )
 
   doba_vyplneni <- df %>%
@@ -742,6 +853,11 @@ build_report_context <- function(df,
     oddeleni_responses = oddeleni_responses,
     oddeleni = oddeleni,
     odd_souhrn_long = odd_souhrn_long,
+    vek_souhrn = vek_souhrn,
+    pozice_ot = pozice_ot,
+    pozice_souhrn = pozice_souhrn,
+    doba_ot = doba_ot,
+    doba_souhrn = doba_souhrn,
     doba_vyplneni = doba_vyplneni,
     avg_doba_vyplneni = avg_doba_vyplneni,
     pocet_resp = pocet_resp,
@@ -826,40 +942,11 @@ oddeleni_index <- str_detect(zakl_info_otazky, oddeleni_expr)
 oddeleni_ot <- company_context$oddeleni_ot
 oddeleni <- report_context$oddeleni
 odd_souhrn_long <- report_context$odd_souhrn_long
-
-vek_souhrn <- final_long_df %>%
-  filter(group_title == params$demografie & typ_otazky == "number") %>%
-  dplyr::select(respondent_id,odpoved_hodnota) %>%
-  mutate(odpoved_hodnota = as.numeric(odpoved_hodnota))%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  count(odpoved_hodnota,name = "pocet")%>%
-  rename(vek = odpoved_hodnota)
-
-pozice_index <- str_detect(zakl_info_otazky, pozice_expr)
-pozice_ot <- zakl_info_otazky[pozice_index]
-pozice_souhrn <- zakl_info %>%
-  filter(otazka_title == pozice_ot)%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  count(odpoved_hodnota,name="pocet")%>%
-  rename(pozice = odpoved_hodnota)
-
-doba_index <- str_detect(zakl_info_otazky, doba_expr)
-doba_ot <- zakl_info_otazky[doba_index]
-doba_souhrn <- zakl_info %>%
-  filter(otazka_title == doba_ot)%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  count(odpoved_hodnota,name="pocet")%>%
-  mutate(az = case_when(
-    str_detect(odpoved_hodnota,do_expr) == T ~ 0,
-    str_detect(odpoved_hodnota,vice_expr) == T ~ 100,
-    .default = as.integer(str_extract(odpoved_hodnota,az_expr))
-  )) %>%
-  arrange(az) %>%
-  mutate(odpoved_hodnota = factor(odpoved_hodnota, levels = odpoved_hodnota))%>%
-  rename(doba=odpoved_hodnota)
+vek_souhrn <- report_context$vek_souhrn
+pozice_ot <- report_context$pozice_ot
+pozice_souhrn <- report_context$pozice_souhrn
+doba_ot <- report_context$doba_ot
+doba_souhrn <- report_context$doba_souhrn
 #############################################################################
 
 ###############engagement
@@ -1197,7 +1284,7 @@ render_ind_odd_slides <- function(df_list, total_pages) {
     '```',
     '</div>',
     '{{arrow_html}}',
-    '<div class="eio-legend"><div class="eio-legend-label">Škála odpovědí</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Určitě ano = skóre 1</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Spíše ano = skóre 2</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Nemohu se rozhodnout = skóre 3</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Spíše ne = skóre 4</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Určitě ne = skóre 5</div></div></div>',
+    '<div class="eio-legend"><div class="eio-legend-label">Škála odpovědí</div><div class="eio-legend-items"><div class="eio-legend-item"><i class="eio-swatch teal"></i>Určitě ano = skóre 1</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Spíše ano = skóre 2</div><div class="eio-legend-item"><i class="eio-swatch grey"></i>Nemohu se rozhodnout<br> = skóre 3</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Spíše ne = skóre 4</div><div class="eio-legend-item"><i class="eio-swatch pink"></i>Určitě ne = skóre 5</div></div></div>',
     '</div>',
     sep = "\n"
   )
@@ -1885,22 +1972,26 @@ ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
 #| fig-height: 2
 #| fig-align: center
 
-ggplot(vek_souhrn, aes(x = vek, y = pocet))+
-  geom_col(fill = "#63E8C6", width = .9, position = "dodge")+
-  geom_text(aes(label = pocet), 
-            family = "Europa", fontface = "bold", 
-            size = 6, vjust = -.3)+
-  scale_y_continuous(expand = expansion(mult = c(0,.1)))+
-  theme(
-    panel.background = element_blank(),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.text.x = element_text(
-      Family = "Europa", size = 20
+if (nrow(vek_souhrn) == 0) {
+  plot_missing_demography()
+} else {
+  ggplot(vek_souhrn, aes(x = vek, y = pocet))+
+    geom_col(fill = "#63E8C6", width = .9, position = "dodge")+
+    geom_text(aes(label = pocet), 
+              family = "Europa", fontface = "bold", 
+              size = 6, vjust = -.3)+
+    scale_y_continuous(expand = expansion(mult = c(0,.1)))+
+    theme(
+      panel.background = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_text(
+        Family = "Europa", size = 20
+      )
     )
-  )
+}
 
 
 ```
@@ -1922,21 +2013,25 @@ ggplot(vek_souhrn, aes(x = vek, y = pocet))+
 ### pozice
 
 
-ggplot(pozice_souhrn, aes(pozice, pocet))+
-  geom_col(width = .5, fill = "#63E8C6", position = "dodge")+
-  geom_text(aes(label = pocet), 
-            family = "Europa", fontface= "bold", size = 12, hjust = 1.1)+
-  coord_flip()+
-  theme(
-    panel.background = element_blank(),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_text(
-      family = "Europa", size = 35
+if (nrow(pozice_souhrn) == 0) {
+  plot_missing_demography()
+} else {
+  ggplot(pozice_souhrn, aes(pozice, pocet))+
+    geom_col(width = .5, fill = "#63E8C6", position = "dodge")+
+    geom_text(aes(label = pocet), 
+              family = "Europa", fontface= "bold", size = 12, hjust = 1.1)+
+    coord_flip()+
+    theme(
+      panel.background = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(
+        family = "Europa", size = 35
+      )
+      
     )
-    
-  )
+}
 
 
 ```
@@ -1952,21 +2047,25 @@ ggplot(pozice_souhrn, aes(pozice, pocet))+
 
 ### doba ve firmě
 
-ggplot(doba_souhrn, aes(doba, pocet))+
-  geom_col(width = .5, fill = "#ff67aa", position = "dodge")+
-  geom_text(aes(label = pocet), 
-            family = "Europa", fontface = "bold", size = 12, hjust = 1.1)+
-  coord_flip()+
-  theme(
-    panel.background = element_blank(),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.x = element_blank(),
-    axis.text.y = element_text(
-      family = "Europa", size = 35
+if (nrow(doba_souhrn) == 0) {
+  plot_missing_demography()
+} else {
+  ggplot(doba_souhrn, aes(doba, pocet))+
+    geom_col(width = .5, fill = "#ff67aa", position = "dodge")+
+    geom_text(aes(label = pocet), 
+              family = "Europa", fontface = "bold", size = 12, hjust = 1.1)+
+    coord_flip()+
+    theme(
+      panel.background = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(
+        family = "Europa", size = 35
+      )
+      
     )
-    
-  )
+}
 
 
 ```
@@ -2216,7 +2315,7 @@ Individuální míra engagementu ukazuje, kolik lidí ve firmě je skutečně pl
 <div class="jakcist-legend-items">
 <div class="jakcist-legend-item"><i class="jakcist-swatch teal"></i>Určitě ano = skóre 1</div>
 <div class="jakcist-legend-item"><i class="jakcist-swatch tealLight"></i>Spíše ano = skóre 2</div>
-<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout = skóre 3</div>
+<div class="jakcist-legend-item"><i class="jakcist-swatch grey"></i>Nemohu se rozhodnout<br> = skóre 3</div>
 <div class="jakcist-legend-item"><i class="jakcist-swatch pink"></i>Spíše ne = skóre 4</div>
 <div class="jakcist-legend-item"><i class="jakcist-swatch pinkStrong"></i>Určitě ne = skóre 5</div>
 </div>
@@ -2410,7 +2509,7 @@ ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_eng
 <div class="ei-legend-items">
 <div class="ei-legend-item"><i class="ei-swatch teal"></i>Určitě ano = skóre 1</div>
 <div class="ei-legend-item"><i class="ei-swatch grey"></i>Spíše ano = skóre 2</div>
-<div class="ei-legend-item"><i class="ei-swatch grey"></i>Nemohu se rozhodnout = skóre 3</div>
+<div class="ei-legend-item"><i class="ei-swatch grey"></i>Nemohu se rozhodnout<br> = skóre 3</div>
 <div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Spíše ne = skóre 4</div>
 <div class="ei-legend-item"><i class="ei-swatch pinkStrong"></i>Určitě ne = skóre 5</div>
 </div>
@@ -3630,28 +3729,50 @@ render_problematic_senior_slides <- function(problematic_senior_pages) {
 
 ###### problematické otázky dle seniority
 
-seniorita_responses <- final_long_df %>%
-  filter(otazka_title == doba_ot)%>%
-  dplyr::select(respondent_id,odpoved_hodnota)%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  rename(seniorita = odpoved_hodnota)
+seniorita_responses <- if (is.na(doba_ot) || !nzchar(doba_ot)) {
+  tibble::tibble(
+    respondent_id = character(),
+    seniorita = character()
+  )
+} else {
+  final_long_df %>%
+    filter(otazka_title == doba_ot)%>%
+    dplyr::select(respondent_id,odpoved_hodnota)%>%
+    group_by(respondent_id)%>%
+    summarise(
+      odpoved_hodnota = first_non_missing(odpoved_hodnota),
+      .groups = "drop"
+    )%>%
+    rename(seniorita = odpoved_hodnota)
+}
 
-problematic_df_senior <- final_long_df %>%
-  filter(otazka_title %in% problematic_otazky_text) %>%
-  group_by(respondent_id,otazka_title,odpoved_hodnota) %>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)), .groups = "drop")%>%
-  left_join(seniorita_responses, by = "respondent_id")%>%
-  mutate(odpoved_kat = case_when(
-    odpoved_hodnota <= 2 ~ "Skvělý výsledek",
-    odpoved_hodnota == 3 ~ "Průměrný výsledek",
-    odpoved_hodnota > 3 ~ "Špatný výsledek"
-  ),
-  odpoved_kat = factor(odpoved_kat, levels=rev(drivery_agg_order)))%>%
-  count(otazka_title, seniorita, odpoved_kat, name = "n") %>%
-  group_by(otazka_title,seniorita) %>%
-  mutate(pct = round((n/sum(n))*100,1))%>%
-  left_join(problematic_otazky,by="otazka_title")
+problematic_df_senior <- if (nrow(seniorita_responses) == 0 || length(problematic_otazky_text) == 0) {
+  tibble::tibble(
+    otazka_title = character(),
+    seniorita = character(),
+    odpoved_kat = factor(character(), levels = rev(drivery_agg_order)),
+    n = integer(),
+    pct = numeric(),
+    poradi = integer()
+  )
+} else {
+  final_long_df %>%
+    filter(otazka_title %in% problematic_otazky_text) %>%
+    group_by(respondent_id,otazka_title,odpoved_hodnota) %>%
+    summarise(odpoved_hodnota = first_non_missing(odpoved_hodnota), .groups = "drop")%>%
+    left_join(seniorita_responses, by = "respondent_id")%>%
+    filter(!is.na(seniorita), nzchar(as.character(seniorita))) %>%
+    mutate(odpoved_kat = case_when(
+      odpoved_hodnota <= 2 ~ "Skvělý výsledek",
+      odpoved_hodnota == 3 ~ "Průměrný výsledek",
+      odpoved_hodnota > 3 ~ "Špatný výsledek"
+    ),
+    odpoved_kat = factor(odpoved_kat, levels=rev(drivery_agg_order)))%>%
+    count(otazka_title, seniorita, odpoved_kat, name = "n") %>%
+    group_by(otazka_title,seniorita) %>%
+    mutate(pct = round((n/sum(n))*100,1))%>%
+    left_join(problematic_otazky,by="otazka_title")
+}
 
 plot_problematic_senior <- function(df,nr){
   df_plot <- get_problematic(df,nr)
