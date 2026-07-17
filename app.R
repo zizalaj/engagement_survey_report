@@ -713,6 +713,7 @@ server <- function(input, output, session) {
 
     total_employees <- suppressWarnings(as.numeric(input$celkem_zamestnancu))
     dept_table <- current_table_rv()
+    has_department_data <- nrow(dept_table) > 0
     filtered_info <- filtered_form_data_info()
     report_scope <- input$report_scope %||% "firma"
     selected_departments <- input$selected_departments %||% character()
@@ -734,12 +735,15 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (nrow(dept_table) == 0) {
-      shiny::showNotification("Pro vybranou skupinu nejsou dostupna data oddeleni.", type = "error")
+    if (!has_department_data && needs_department_reports) {
+      shiny::showNotification(
+        "Vybrany formular neobsahuje otazku oddeleni, proto lze vyrenderovat pouze firemni report.",
+        type = "error"
+      )
       return()
     }
 
-    if (needs_company_report && any(is.na(dept_table$pocet_zamestnancu))) {
+    if (needs_company_report && has_department_data && any(is.na(dept_table$pocet_zamestnancu))) {
       shiny::showNotification("Doplnte pocet zamestnancu pro vsechna oddeleni.", type = "error")
       return()
     }
@@ -772,12 +776,16 @@ server <- function(input, output, session) {
       dir.create(department_output_dir, recursive = TRUE)
     }
 
-    manual_json <- jsonlite::toJSON(
-      dept_table %>% dplyr::select(.data$odpoved_hodnota, .data$pocet_zamestnancu),
-      dataframe = "rows",
-      auto_unbox = TRUE,
-      na = "null"
-    )
+    manual_json <- if (has_department_data) {
+      jsonlite::toJSON(
+        dept_table %>% dplyr::select(.data$odpoved_hodnota, .data$pocet_zamestnancu),
+        dataframe = "rows",
+        auto_unbox = TRUE,
+        na = "null"
+      )
+    } else {
+      NULL
+    }
 
     common_params <- list(
       pruzkum = input$form_id,

@@ -660,23 +660,31 @@ oddeleni_ot <- if (any(oddeleni_index, na.rm = TRUE)) {
 }
 
 if (is.na(oddeleni_ot) || !nzchar(oddeleni_ot)) {
-  stop("Department question not found in selected demography group.")
+  oddeleni <- tibble::tibble(
+    odpoved_hodnota = character(),
+    pocet_respondentu = integer(),
+    pocet_zamestnancu = numeric()
+  )
+  odd_souhrn_long <- tibble::tibble(
+    odpoved_hodnota = character(),
+    Kategorie = character(),
+    Pocet = numeric(),
+    oddeleni_trunc = character()
+  )
+} else {
+  oddeleni <- zakl_info %>%
+    filter(otazka_title == oddeleni_ot) %>%
+    group_by(respondent_id) %>%
+    summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota))) %>%
+    count(odpoved_hodnota, name = "pocet_respondentu") %>%
+    mutate(pocet_zamestnancu = 0)
+
+  odd_souhrn_long <- oddeleni %>%
+    pivot_longer(cols = 2:3, names_to = "Kategorie", values_to = "Pocet") %>%
+    mutate(
+      oddeleni_trunc = str_trunc(.data$odpoved_hodnota, width = 20, ellipsis = "...")
+    )
 }
-
-oddeleni <- zakl_info %>%
-  filter(otazka_title == oddeleni_ot) %>%
-  group_by(respondent_id) %>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota))) %>%
-  count(odpoved_hodnota, name = "pocet_respondentu") %>%
-  mutate(pocet_zamestnancu = 0)
-
-
-odd_souhrn_long <- oddeleni %>%
-  pivot_longer(cols= 2:3, names_to = "Kategorie", values_to = "Pocet")
-
-
-odd_souhrn_long$oddeleni_trunc <- str_trunc(odd_souhrn_long$odpoved_hodnota, 
-                                            width = 20, ellipsis = "...")
 
 
 #### věk
@@ -736,6 +744,13 @@ normalize_oddeleni_manual <- function(oddeleni_manual) {
 
   if (is.character(oddeleni_manual) && length(oddeleni_manual) == 1 && nzchar(oddeleni_manual)) {
     oddeleni_manual <- jsonlite::fromJSON(oddeleni_manual, simplifyDataFrame = TRUE)
+  }
+
+  if (is.null(oddeleni_manual) || length(oddeleni_manual) == 0) {
+    return(tibble::tibble(
+      odpoved_hodnota = character(),
+      pocet_zamestnancu = numeric()
+    ))
   }
 
   oddeleni_manual <- tibble::as_tibble(oddeleni_manual)
@@ -887,8 +902,13 @@ company_context <- build_report_context(
   oddeleni_manual_df,
   manual_total_employees
 )
+has_department_data <- !is.na(company_context$oddeleni_ot) && nrow(company_context$oddeleni_responses) > 0
 
 if (is_department_report) {
+  if (!has_department_data) {
+    stop("Department reports require the oddeleni question in the selected demography group.")
+  }
+
   if (is.na(oddeleni_report) || !nzchar(oddeleni_report)) {
     stop("oddeleni_report must be provided when report_type = 'oddeleni'.")
   }
@@ -1034,12 +1054,15 @@ engagement_index_otazky$uroven_engagementu <- factor(engagement_index_otazky$uro
 
 ###### engagement index podle oddělení
 
-odd_responses <- final_long_df %>%
-  filter(otazka_title == oddeleni_ot)%>%
-  dplyr::select(respondent_id,odpoved_hodnota)%>%
-  group_by(respondent_id)%>%
-  summarise(odpoved_hodnota = first(na.omit(odpoved_hodnota)))%>%
-  rename(oddeleni = odpoved_hodnota)
+odd_responses <- if (!has_department_data) {
+  tibble::tibble(
+    respondent_id = character(),
+    oddeleni = character()
+  )
+} else {
+  report_context$oddeleni_responses %>%
+    rename(oddeleni = odpoved_hodnota)
+}
 
 
 
@@ -1063,7 +1086,19 @@ eng_index_odd <- final_long_df %>%
 eng_index_odd$uroven_engagementu <- factor(eng_index_odd$uroven_engagementu,
                             levels = rev(eng_order))
 
+if (!has_department_data) {
+  eng_index_odd <- tibble::tibble(
+    oddeleni = character(),
+    uroven_engagementu = factor(character(), levels = rev(eng_order)),
+    n = integer(),
+    pct = numeric()
+  )
+}
+
 split_depts <- function(df){
+  if (nrow(df) == 0) {
+    return(list())
+  }
   
   odd <- unique(df$oddeleni)
   nr_dept <- length(odd)
@@ -1228,6 +1263,15 @@ ind_eng_odd <- final_long_df %>%
   group_by(oddeleni)%>%
   mutate(pct = round((n/sum(n))*100,1),
          ind_mira = factor(ind_mira, levels = rev(individual_eng_order)))
+
+if (!has_department_data) {
+  ind_eng_odd <- tibble::tibble(
+    oddeleni = character(),
+    ind_mira = factor(character(), levels = rev(individual_eng_order)),
+    n = integer(),
+    pct = numeric()
+  )
+}
 
 ind_odd_list <- split_depts(ind_eng_odd)
 
@@ -1933,6 +1977,9 @@ ve vaší firmě odpovědělo na průzkum.
 #| fig-height: 4
 #| fig-align: center
 
+if (nrow(odd_souhrn_long) == 0) {
+  plot_missing_demography()
+} else {
 ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
   geom_col(width = .8, position = "dodge")+
   geom_text(aes(label = Pocet), 
@@ -1958,6 +2005,7 @@ ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
   )+
   scale_fill_manual(values = c("pocet_respondentu" = "#63E8C6","pocet_zamestnancu" = "#D1D1D1"),
                     labels = c("Počet respondentů", "Počet zaměstnanců"))
+}
 ```
 </div>
 </div>
@@ -2525,7 +2573,7 @@ ggplot(engagement_index_otazky, aes(x = otazka_title, y = pct, fill = uroven_eng
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_eng_odd_slides(eng_odd_list, eng_odd_pages)
 }
 ```
@@ -2539,7 +2587,7 @@ if (is_firma_report) {
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_ind_odd_slides(ind_odd_list, ind_odd_pages)
 }
 ```
@@ -3045,6 +3093,17 @@ driver_detail_firma <- df_firma %>%
 
 
 get_detail_odd <- function(df,nr){
+  if (!has_department_data) {
+    return(tibble::tibble(
+      group_title = character(),
+      oddeleni = character(),
+      odpoved_hodnota = factor(character(), levels = rev(detail_order)),
+      n = integer(),
+      pct = numeric(),
+      poradi = integer(),
+      pct_firma = numeric()
+    ))
+  }
   
   df_odd <- df %>%
   filter(group_title != params$demografie & group_title != "Engagement"
@@ -3400,7 +3459,7 @@ render_driver_detail_slides(drivery_detail, nr_drivers)
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_driver_odd_slides(urc_ano_odd, nr_drivers)
 }
 ```
@@ -3434,6 +3493,17 @@ problematic_df <- final_long_df %>%
   group_by(otazka_title,oddeleni) %>%
   mutate(pct = round((n/sum(n))*100,1))%>%
   left_join(problematic_otazky,by="otazka_title")
+
+if (!has_department_data) {
+  problematic_df <- tibble::tibble(
+    otazka_title = character(),
+    oddeleni = character(),
+    odpoved_kat = factor(character(), levels = rev(drivery_agg_order)),
+    n = integer(),
+    pct = numeric(),
+    poradi = integer()
+  )
+}
 
 get_problematic <- function(df,nr){
 
@@ -4031,7 +4101,7 @@ render_problematic_section <- function(agenda_cfg) {
   )
 
   cat(knitr::knit_child(text = slide_html, quiet = TRUE, envir = environment()), sep = "\n")
-  if (is_firma_report) {
+  if (is_firma_report && has_department_data) {
     render_problematic_breakdown_slides(problematic_pages)
   }
   render_problematic_senior_slides(problematic_senior_pages)
@@ -4246,7 +4316,7 @@ if (is_firma_report) {
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_driver_odd_slides(spise_ano_odd, nr_drivers)
 }
 ```
@@ -4259,7 +4329,7 @@ if (is_firma_report) {
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_driver_odd_slides(nevim_odd, nr_drivers)
 }
 ```
@@ -4271,7 +4341,7 @@ if (is_firma_report) {
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_driver_odd_slides(spise_ne_odd, nr_drivers)
 }
 ```
@@ -4283,7 +4353,7 @@ if (is_firma_report) {
 #| message: false
 #| results: asis
 
-if (is_firma_report) {
+if (is_firma_report && has_department_data) {
   render_driver_odd_slides(urc_ne_odd, nr_drivers)
 }
 ```
