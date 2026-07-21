@@ -128,7 +128,7 @@ create_render_workspace <- function(report_path,
                                     html_includes_path,
                                     visuals_path,
                                     fonts_path,
-                                    helper_path,
+                                    r_dir_path,
                                     token_path) {
   workspace_dir <- tempfile("navratnost-render-")
   dir.create(workspace_dir, recursive = TRUE, showWarnings = FALSE)
@@ -138,14 +138,7 @@ create_render_workspace <- function(report_path,
     copy_path_into_dir(asset_path, workspace_dir)
   }
 
-  helper_dir <- file.path(workspace_dir, "R")
-  dir.create(helper_dir, recursive = TRUE, showWarnings = FALSE)
-
-  helper_target <- file.path(helper_dir, basename(helper_path))
-  helper_copied <- file.copy(helper_path, helper_target, overwrite = TRUE)
-  if (!isTRUE(helper_copied)) {
-    stop("Failed to prepare Typeform helper in render workspace.")
-  }
+  copy_path_into_dir(r_dir_path, workspace_dir)
 
   if (file.exists(token_path)) {
     token_target <- file.path(workspace_dir, "token.txt")
@@ -244,7 +237,8 @@ server <- function(input, output, session) {
   html_includes_path <- here::here("html_includes")
   visuals_path <- here::here("visuals")
   fonts_path <- here::here("fonts")
-  helper_path <- here::here("R", "typeform_helpers.R")
+  r_dir_path <- here::here("R")
+  project_root_path <- here::here()
   company_output_dir <- here::here("output")
   department_output_dir <- file.path(company_output_dir, "oddeleni-reports")
   forms_rv <- shiny::reactiveVal(NULL)
@@ -807,15 +801,25 @@ server <- function(input, output, session) {
       html_includes_path = html_includes_path,
       visuals_path = visuals_path,
       fonts_path = fonts_path,
-      helper_path = helper_path,
+      r_dir_path = r_dir_path,
       token_path = token_path
     )
     on.exit(unlink(render_workspace, recursive = TRUE, force = TRUE), add = TRUE)
 
     render_one_report <- function(output_name, execute_params) {
       old_wd <- getwd()
+      old_cache_root <- Sys.getenv("OPENENDED_CACHE_ROOT", unset = NA_character_)
       on.exit(setwd(old_wd), add = TRUE)
+      on.exit(
+        if (is.na(old_cache_root)) {
+          Sys.unsetenv("OPENENDED_CACHE_ROOT")
+        } else {
+          Sys.setenv(OPENENDED_CACHE_ROOT = old_cache_root)
+        },
+        add = TRUE
+      )
       setwd(render_workspace)
+      Sys.setenv(OPENENDED_CACHE_ROOT = project_root_path)
 
       quarto::quarto_render(
         input = "report_editable_api.qmd",

@@ -2430,6 +2430,43 @@ Metriky engagementu
   width:1620px;
   margin-top:70px;
 }
+.openended-results-v2{
+  display:grid;
+  grid-template-rows:auto auto 1fr auto;
+  padding:72px 104px 28px 104px;
+}
+.openended-results-v2 .mrv-title{
+  font-size:68px;
+  line-height:1.04;
+  margin-bottom:14px;
+}
+.openended-results-v2 .mrv-chart{
+  width:1600px;
+  margin-top:18px;
+  align-self:start;
+}
+.openended-note{
+  margin-top:8px;
+  max-width:1500px;
+  font-family:var(--Europa-Regular);
+  font-size:18px;
+  line-height:1.2;
+  color:var(--normal-grey);
+}
+.openended-results-v2 .mrv-chart--fallback{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:620px;
+}
+.openended-fallback-copy{
+  width:1120px;
+  font-family:var(--Europa-Regular);
+  font-size:34px;
+  line-height:1.28;
+  color:var(--normal-grey);
+  text-align:center;
+}
 .drvodd-swatch{
   width:var(--legend-swatch-size);
   height:var(--legend-swatch-size);
