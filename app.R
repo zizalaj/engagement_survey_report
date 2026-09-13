@@ -182,15 +182,24 @@ ui <- shiny::fluidPage(
         min = 1,
         step = 1
       ),
-      shiny::radioButtons(
+      shiny::checkboxGroupInput(
         "report_scope",
         "Rozsah reportu",
         choices = c(
-          "Pouze firemni report" = "firma",
-          "Pouze oddeleni" = "oddeleni",
-          "Firma i oddeleni" = "oboji"
+          "Firemni report" = "firma",
+          "Individualni reporty oddeleni" = "oddeleni",
+          "Vybrana oddeleni dohromady" = "oddeleni_souhrn"
         ),
         selected = "firma"
+      ),
+      shiny::conditionalPanel(
+        condition = "input.report_scope && input.report_scope.indexOf('oddeleni_souhrn') >= 0",
+        shiny::textInput(
+          "combined_report_subtitle",
+          "Podnadpis kombinovaneho reportu",
+          value = "",
+          placeholder = "Volitelny podnadpis"
+        )
       ),
       shiny::checkboxGroupInput(
         "selected_departments",
@@ -711,8 +720,15 @@ server <- function(input, output, session) {
     filtered_info <- filtered_form_data_info()
     report_scope <- input$report_scope %||% "firma"
     selected_departments <- input$selected_departments %||% character()
-    needs_company_report <- report_scope %in% c("firma", "oboji")
-    needs_department_reports <- report_scope %in% c("oddeleni", "oboji")
+    needs_combined_report <- "oddeleni_souhrn" %in% report_scope
+    needs_company_report <- "firma" %in% report_scope
+    needs_department_reports <- "oddeleni" %in% report_scope
+    needs_department_selection <- needs_department_reports || needs_combined_report
+
+    if (length(report_scope) == 0) {
+      shiny::showNotification("Vyberte alespon jeden typ reportu.", type = "error")
+      return()
+    }
 
     if (!nzchar(input$demography_group %||% "")) {
       shiny::showNotification("Vyberte skupinu demografickych informaci.", type = "error")
@@ -724,12 +740,13 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (!isTRUE(is.finite(total_employees)) || total_employees <= 0) {
+    if ((needs_company_report || needs_department_reports) &&
+        (!isTRUE(is.finite(total_employees)) || total_employees <= 0)) {
       shiny::showNotification("Zadejte platny celkovy pocet zamestnancu.", type = "error")
       return()
     }
 
-    if (!has_department_data && needs_department_reports) {
+    if (!has_department_data && needs_department_selection) {
       shiny::showNotification(
         "Vybrany formular neobsahuje otazku oddeleni, proto lze vyrenderovat pouze firemni report.",
         type = "error"
@@ -742,12 +759,12 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (needs_department_reports && length(selected_departments) == 0) {
+    if (needs_department_selection && length(selected_departments) == 0) {
       shiny::showNotification("Vyberte alespon jedno oddeleni pro managersky report.", type = "error")
       return()
     }
 
-    if (needs_department_reports) {
+    if (needs_department_selection) {
       selected_department_rows <- dept_table %>%
         dplyr::filter(.data$odpoved_hodnota %in% selected_departments)
 
@@ -856,6 +873,25 @@ server <- function(input, output, session) {
             html_output_name = "report_editable_api_preview.html",
             pdf_output_path = file.path(company_output_dir, "report_editable_api_preview.pdf"),
             execute_params = c(common_params, list(report_type = "firma", oddeleni_report = NULL))
+          )
+        )
+      }
+
+      if (needs_combined_report) {
+        rendered_files <- c(
+          rendered_files,
+          render_one_pdf(
+            html_output_name = "report_oddeleni_souhrn.html",
+            pdf_output_path = file.path(company_output_dir, "report_oddeleni_souhrn.pdf"),
+            execute_params = c(
+              common_params,
+              list(
+                report_type = "oddeleni_souhrn",
+                oddeleni_report = NULL,
+                oddeleni_reports = selected_departments,
+                combined_report_subtitle = input$combined_report_subtitle %||% ""
+              )
+            )
           )
         )
       }

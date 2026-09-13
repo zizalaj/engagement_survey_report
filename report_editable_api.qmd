@@ -24,6 +24,8 @@ params:
   oddeleni_manual: null
   report_type: "firma"
   oddeleni_report: null
+  oddeleni_reports: null
+  combined_report_subtitle: ""
   demografie: "Demografické otázky"
   demografie_filter_ref: null
   demografie_filter_values: null
@@ -50,6 +52,9 @@ escape_title_html <- function(text) {
 title_report_type <- tolower(as.character((params$report_type %||% "firma")[[1]]))
 title_oddeleni_report <- as.character((params$oddeleni_report %||% "")[[1]])
 if (is.na(title_oddeleni_report)) title_oddeleni_report <- ""
+combined_report_subtitle <- as.character((params$combined_report_subtitle %||% "")[[1]])
+if (is.na(combined_report_subtitle)) combined_report_subtitle <- ""
+escaped_combined_report_subtitle <- escape_title_html(combined_report_subtitle)
 title_filter_values <- normalize_demography_filter_values(params$demografie_filter_values %||% NULL)
 joined_title_filter_values <- escape_title_html(paste(title_filter_values, collapse = ", "))
 escaped_title_oddeleni_report <- escape_title_html(title_oddeleni_report)
@@ -60,6 +65,8 @@ report_subtitle <- if (identical(title_report_type, "oddeleni")) {
   } else {
     paste0("Výstup oddělení ", escaped_title_oddeleni_report)
   }
+} else if (identical(title_report_type, "oddeleni_souhrn")) {
+  escaped_combined_report_subtitle
 } else if (length(title_filter_values) > 0) {
   paste0("Výstup ", joined_title_filter_values)
 } else {
@@ -153,16 +160,36 @@ showtext_auto()
 
 report_type <- tolower(as.character(params$report_type %||% "firma")[[1]])
 
-if (!report_type %in% c("firma", "oddeleni")) {
-  stop("Unsupported report_type. Use 'firma' or 'oddeleni'.")
+if (!report_type %in% c("firma", "oddeleni", "oddeleni_souhrn")) {
+  stop("Unsupported report_type. Use 'firma', 'oddeleni' or 'oddeleni_souhrn'.")
 }
 
-is_firma_report <- identical(report_type, "firma")
+is_firma_report <- report_type %in% c("firma", "oddeleni_souhrn")
 is_department_report <- identical(report_type, "oddeleni")
 oddeleni_report <- params$oddeleni_report %||% NA_character_
-report_scope_title <- if (is_department_report) "za odd&#283;len&#237;" else "za firmu"
-driver_scope_title <- if (is_department_report) "Drivery za odd&#283;len&#237;" else "Drivery za firmu"
-driver_scope_howto_title <- if (is_department_report) "Vysledky driveru za odd&#283;len&#237;" else "Vysledky driveru za firmu"
+oddeleni_reports <- as.character(params$oddeleni_reports %||% character())
+oddeleni_reports <- unique(oddeleni_reports[!is.na(oddeleni_reports) & nzchar(oddeleni_reports)])
+report_scope_title <- if (is_department_report) {
+  "za odd&#283;len&#237;"
+} else if (identical(report_type, "oddeleni_souhrn")) {
+  "za vybran&#225; odd&#283;len&#237;"
+} else {
+  "za firmu"
+}
+driver_scope_title <- if (is_department_report) {
+  "Drivery za odd&#283;len&#237;"
+} else if (identical(report_type, "oddeleni_souhrn")) {
+  "Drivery za vybran&#225; odd&#283;len&#237;"
+} else {
+  "Drivery za firmu"
+}
+driver_scope_howto_title <- if (is_department_report) {
+  "Vysledky driveru za odd&#283;len&#237;"
+} else if (identical(report_type, "oddeleni_souhrn")) {
+  "Vysledky driveru za vybran&#225; odd&#283;len&#237;"
+} else {
+  "Vysledky driveru za firmu"
+}
 driver_benchmark_current_label <- if (is_department_report && !is.na(oddeleni_report) && nzchar(oddeleni_report)) {
   oddeleni_report
 } else {
@@ -943,8 +970,41 @@ if (is_department_report) {
     current_report_employee_count[[1]]
   }
 } else {
-  df_report <- df_firma
-  current_report_employee_count <- manual_total_employees
+  if (identical(report_type, "oddeleni_souhrn")) {
+    if (!has_department_data) {
+      stop("Combined department reports require the oddeleni question in the selected demography group.")
+    }
+
+    if (length(oddeleni_reports) == 0) {
+      stop("oddeleni_reports must contain at least one department when report_type = 'oddeleni_souhrn'.")
+    }
+
+    selected_respondents <- company_context$oddeleni_responses %>%
+      filter(odpoved_hodnota %in% oddeleni_reports) %>%
+      pull(respondent_id) %>%
+      unique()
+
+    if (length(selected_respondents) == 0) {
+      stop("No respondents found for the selected departments.")
+    }
+
+    df_report <- df_firma %>%
+      filter(respondent_id %in% selected_respondents)
+
+    current_report_employee_count <- oddeleni_manual_df %>%
+      filter(odpoved_hodnota %in% oddeleni_reports) %>%
+      summarise(pocet_zamestnancu = sum(pocet_zamestnancu, na.rm = FALSE)) %>%
+      pull(pocet_zamestnancu)
+
+    current_report_employee_count <- if (length(current_report_employee_count) == 0) {
+      NA_real_
+    } else {
+      current_report_employee_count[[1]]
+    }
+  } else {
+    df_report <- df_firma
+    current_report_employee_count <- manual_total_employees
+  }
 }
 
 final_long_df <- df_report
@@ -954,6 +1014,15 @@ report_context <- build_report_context(
   oddeleni_manual_df,
   current_report_employee_count
 )
+
+department_return_rates <- report_context$oddeleni %>%
+  mutate(
+    navratnost = if_else(
+      is.na(pocet_zamestnancu) | pocet_zamestnancu <= 0,
+      NA_real_,
+      round((pocet_respondentu / pocet_zamestnancu) * 100, 2)
+    )
+  )
 
 mc_present <- include_multiple_choice(final_long_df)
 openend_present <- include_openended(final_long_df)
@@ -2014,6 +2083,30 @@ ggplot(odd_souhrn_long,aes(x = oddeleni_trunc, y = Pocet, fill = Kategorie))+
   )+
   scale_fill_manual(values = c("pocet_respondentu" = "#63E8C6","pocet_zamestnancu" = "#D1D1D1"),
                     labels = c("Počet respondentů", "Počet zaměstnanců"))
+}
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+if (identical(report_type, "oddeleni_souhrn") && nrow(department_return_rates) > 0) {
+  rate_rows <- vapply(seq_len(nrow(department_return_rates)), function(i) {
+    rate <- department_return_rates$navratnost[[i]]
+    rate_text <- if (is.na(rate)) "N/A" else paste0(format(rate, nsmall = 2, decimal.mark = ","), " %")
+    paste0(
+      '<span class="department-return-rate"><strong>',
+      escape_title_html(department_return_rates$odpoved_hodnota[[i]]),
+      '</strong>: ', rate_text, '</span>'
+    )
+  }, character(1))
+
+  cat(
+    '<div class="department-return-rates"><strong>Návratnost podle oddělení:</strong> ',
+    paste(rate_rows, collapse = ' &nbsp; | &nbsp; '),
+    '</div>',
+    sep = ""
+  )
 }
 ```
 </div>
